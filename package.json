@@ -1,7 +1,7 @@
 {
   "name": "did-common-typescript",
   "version": "0.1.0",
-  "description": "",
+  "description": "Common TypeScript DID library.",
   "scripts": {
     "precommit": "npm run lint",
     "build": "tsc",
