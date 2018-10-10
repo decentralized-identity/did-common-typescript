@@ -17,13 +17,13 @@ export default class DidDocument {
   }
 
   /** Url of the @context for this document */
-  public readonly context: string;
+  public context: string;
 
   /** Id of the document (the DID) */
-  public readonly id: string;
+  public id: string;
 
   /** Array of public keys associated with the DID */
-  public readonly publicKey: DidPublicKey[];
+  public publicKey: DidPublicKey[];
 
   constructor (json: any) {
     for (let field of ['@context', 'id']) {
