@@ -48,5 +48,10 @@
   },
   "files": [
     "dist/lib/**/*"
-  ]
+  ],
+  "dependencies": {
+    "@types/q": "^1.5.1",
+    "base64url": "^3.0.1",
+    "node-webcrypto-ossl": "^1.0.39"
+  }
 }
