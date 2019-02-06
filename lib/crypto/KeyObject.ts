@@ -27,7 +27,7 @@ export default class KeyObject {
    * @param keyType Key type.
    * @param keyObject The key object to store.
    */
-  public constructor(keyType: KeyType, keyObject: any) {
+  public constructor (keyType: KeyType, keyObject: any) {
     this._keyType = keyType;
     this._keyObject = keyObject;
     this._isKeyPair = false;
@@ -61,14 +61,14 @@ export default class KeyObject {
   /**
    * Gets the key type.
    */
-  public get keyType(): KeyType {
+  public get keyType (): KeyType {
     return this._keyType;
   }
 
   /**
    * Gets a value indicating whether the key is a public key crypto scheme
    */
-  public get isPublicKeyCrypto(): boolean {
+  public get isPublicKeyCrypto (): boolean {
     switch (this._keyType) {
       case KeyType.EC:
       case KeyType.RSA:
@@ -83,35 +83,35 @@ export default class KeyObject {
   /**
    * Gets a value indicating whether the key is a private key only
    */
-  public get isPrivateKey(): boolean {
+  public get isPrivateKey (): boolean {
     return !this.publicKey && this.privateKey;
   }
 
   /**
    * Gets a value indicating whether the key object is a key pair containing a public and private key
    */
-  public get isKeyPair(): boolean {
+  public get isKeyPair (): boolean {
     return this._isKeyPair;
   }
 
   /**
    * Gets secret key
    */
-  public get secretKey(): any {
+  public get secretKey (): any {
     return this._secretKey;
   }
 
   /**
    * Gets public key
    */
-  public get publicKey(): any {
+  public get publicKey (): any {
     return this._publicKey;
   }
 
   /**
    * Gets private key
    */
-  public get privateKey(): any {
+  public get privateKey (): any {
     return this._privateKey;
   }
 }
