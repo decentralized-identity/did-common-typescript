@@ -1,13 +1,40 @@
 import { KeyType } from './KeyType';
 import { KeyUse } from './KeyUse';
 import KeyObject from './KeyObject';
+import PairwiseKey from './PairwiseKey';
 import base64url from 'base64url';
 import { Buffer } from 'buffer';
+
+/**
+ * Class to model a master key
+ */
+class MasterKey {
+  /**
+   * Get the index for master key
+   */
+  did: string;
+
+  /**
+   * Get the master key
+   */
+  key: Buffer | null;
+
+  /**
+   * Create an instance of DidKey.
+   * @param did The DID.
+   * @param key The master key.
+   */
+  constructor (did: string, key: Buffer | null) {
+    this.did = did;
+    this.key = key;
+  }
+}
 
 /**
  * Class to model a key
  */
 export default class DidKey {
+
   // key type
   private _keyType: KeyType;
 
@@ -32,6 +59,12 @@ export default class DidKey {
   // Store key object. This is the format returned by generateKey
   private _keyObject: any;
 
+  // Set of master keys
+  private _didMasterKeys: MasterKey[] = [];
+
+  // Set of pairwise keys
+  // private _didPairwiseKeys: PairwiseKey[] = [];
+
   /**
    * Create an instance of DidKey.
    * @param crypto The crypto object.
@@ -46,7 +79,7 @@ export default class DidKey {
     algorithm: any,
     keyType: KeyType,
     keyUse: KeyUse,
-    key: Buffer | null = null,
+    key: any = null,
     exportable: boolean = true
   ) {
     this._crypto = crypto;
@@ -145,9 +178,65 @@ export default class DidKey {
     throw new Error('No secret for verifying');
   }
 
+  /**
+   * Generate a pairwise key
+   * @param seed  The master seed for generating pairwise keys
+   * @param did  The owner DID
+   * @param peerId  The representation of the peer
+   */
+  public generatePairwise (seed: Buffer, did: string, peerId: string): PromiseLike<DidKey> {
+    return this._generateDidMasterKey(seed, did, peerId). then((didMasterKey: MasterKey) => {
+      switch (this._keyType) {
+        case KeyType.EC:
+          const pairwiseKey: PairwiseKey = new PairwiseKey(did, peerId);
+          return pairwiseKey.generate(
+            didMasterKey.key ? didMasterKey.key : Buffer.alloc(32), this._crypto, this._algorithm, this._keyType, this._keyUse, this._exportable)
+          .then((pairwiseDidKey: DidKey) => {
+            return pairwiseDidKey;
+          });
+        default:
+          throw new Error(`Pairwise key for type '${this._keyType}' is not supported.`);
+      }
+    });
+  }
+
   // True if the key is a key pair
   private get _isKeyPair (): boolean {
     return this._keyType === KeyType.EC || this._keyType === KeyType.RSA;
+  }
+
+  /**
+   * Generate a pairwise did master key.
+   * @param seed  The master seed for generating pairwise keys
+   * @param did  The owner DID
+   * @param peerId  The representation of the peer
+   */
+  private _generateDidMasterKey (seed: Buffer, did: string, peerId: string): PromiseLike<MasterKey> {
+    let mk: MasterKey | null = null;
+
+    // Check if key was already generated
+    this._didMasterKeys.forEach((masterKey: MasterKey): any => {
+      if (masterKey.did === did) {
+        mk = masterKey;
+        return;
+      }
+    });
+
+    if (mk) {
+      return new Promise((resolve, reject) => {
+        return mk;
+      });
+    }
+
+    let alg = { name: 'hmac', hash: 'SHA-512' };
+    let signKey: DidKey = new DidKey(this._crypto, alg, KeyType.Oct, KeyUse.Signature, seed);
+    return signKey.jwkKey.then((jwk) => {
+      return signKey.sign(Buffer.from(did)).then((signature: ArrayBuffer) => {
+        mk = new MasterKey(did, Buffer.from(signature));
+        this._didMasterKeys.push(mk);
+        return mk;
+      });
+    });
   }
 
   // Set keyUsage
@@ -200,16 +289,16 @@ export default class DidKey {
     }
 
     this._jwkKey = jwkKey;
-    return this._crypto.subtle
-      .importKey('jwk', this._jwkKey, this._algorithm, this._exportable, this._setKeyUsage())
-      .then((keyObject: any) => {
-        this._keyObject = new KeyObject(this.keyType, keyObject);
-        return this._keyObject;
-      })
+    return this._crypto.subtle.importKey('jwk', this._jwkKey, this._algorithm, this._exportable, this._setKeyUsage()).then((keyObject: any) => {
+      this._keyObject = new KeyObject(this.keyType, keyObject);
+      return this._keyObject;
+    });
+      /*
       .catch((err: Error) => {
         // Re-throw the error as a higher-level error.
         throw new Error(`import error for key type '${this._keyType}' - '${err.message}'.`);
       });
+      */
   }
 
   // Save the EC key or generate one if not specified by the caller

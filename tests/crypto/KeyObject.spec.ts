@@ -5,7 +5,17 @@ import WebCrypto from 'node-webcrypto-ossl';
 const crypto = new WebCrypto();
 
 describe('Constructor', () => {
-  describe('Test constructor oct key', () => {
+  describe('Test constructor', () => {
+    it('Throw exception.', () => {
+      try {
+        let key = new KeyObject(KeyType.RSA, {});
+        expect(key).toBeUndefined();
+      } catch (err) {
+        expect(err).toEqual(jasmine.any(Error));
+        expect(`Key with type 'RSA' is expected to have the type public or private`).toBe(err.message);
+      }
+    });
+
     it('Should set the right properties for the symmetric key.', (done) => {
       const alg = { name: 'hmac', hash: 'SHA-256' };
       crypto.subtle.generateKey(alg, true, [ 'sign' ]).then((key) => {

@@ -203,5 +203,48 @@ describe('DidKey', () => {
         });
       });
     });
+
+/*
+      it('Check PairwiseId generation uniqueness', () => {
+        let inx: number = 0;
+        let results: string[] = [];
+        for (inx=0 ; inx < 1000; inx++){
+          let address: string = `m/${inx}/0`;
+          let pwId: string = pairwiseId.generate(address, 'http://domain.com', 'did:sidetree:ignored');
+          results.push(pwId);
+          expect(1).toBe(results.filter(element => element === pwId).length);
+        }
+    });
+
+    it('Check PairwiseId generation uniqueness with different seed', () => {
+      let seed = Buffer.from('yprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi');
+      let pairwiseId = new PairwiseId(seed);
+
+      let inx: number = 0;
+      for (inx=0 ; inx < 1000; inx++){
+        let address: string = `m/0/${inx}`;
+        let pwId: string = pairwiseId.generate(address, 'http://domain.com', 'did:sidetree:ignored');
+        expect(0).toBe(pairwiseIds.filter(element => element === pwId).length);
+      }
+  });
+
+  it('Check PairwiseId generation uniqueness with different peer', () => {
+    let inx: number = 0;
+    for (inx=0 ; inx < 1000; inx++){
+      let address: string = `m/0/${inx}`;
+      let pwId: string = pairwiseId.generate(address, 'http://domain1.com', 'did:sidetree:ignored');
+      expect(0).toBe(pairwiseIds.filter(element => element === pwId).length);
+    }
+  });
+
+  it('Check PairwiseId generation uniqueness with different did', () => {
+    let inx: number = 0;
+    for (inx=0 ; inx < 1000; inx++){
+      let address: string = `m/0/${inx}`;
+      let pwId: string = pairwiseId.generate(address, 'http://domain.com', 'did:sidetree:ignored1');
+      expect(0).toBe(pairwiseIds.filter(element => element === pwId).length);
+    }
+  });
+*/
   });
 });
