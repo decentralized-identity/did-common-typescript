@@ -11,7 +11,7 @@ describe('PairwiseKey', () => {
     it('Should set the right properties.', () => {
       let key = new PairwiseKey('1234567890', 'www.peer.com');
       expect('1234567890-www.peer.com').toBe(key.id);
-      expect(key.key).toBeNull();
+      expect(key.key).toBeUndefined();
     });
 
   });

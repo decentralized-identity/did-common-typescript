@@ -23,7 +23,7 @@ export default class PairwiseKey {
   /**
    * Get the pairwise key
    */
-  private _key: DidKey | null;
+  private _key: DidKey | undefined;
 
   /**
    * Get the id for the pairwise key
@@ -35,7 +35,7 @@ export default class PairwiseKey {
   /**
    * Get the id for the pairwise key
    */
-  public get key (): DidKey | null {
+  public get key (): DidKey | undefined {
     return this._key;
   }
 
@@ -47,7 +47,7 @@ export default class PairwiseKey {
   constructor (did: string, peerId: string) {
     this._id = `${did}-${peerId}`;
     this._peerId = peerId;
-    this._key = null;
+    this._key = undefined;
   }
 
   /**

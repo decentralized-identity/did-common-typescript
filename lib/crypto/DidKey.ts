@@ -278,7 +278,7 @@ export default class DidKey {
   }
 
   // Save the key or generate one if not specified by the caller
-  private setKey (key: Buffer | null): Promise<any> {
+  private setKey (key: Buffer): Promise<any> {
     switch (this._keyType) {
       case KeyType.Oct:
         return this.setOctKey(key);
@@ -291,7 +291,7 @@ export default class DidKey {
   }
 
   // Save the oct key or generate one if not specified by the caller
-  private setOctKey (key: Buffer | null): Promise<any> {
+  private setOctKey (key: Buffer): Promise<any> {
     if (!key) {
       // Generate now random buffer
       let length = this._algorithm.length ? this._algorithm.length : 16;
