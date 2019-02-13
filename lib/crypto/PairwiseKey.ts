@@ -65,10 +65,10 @@ export default class PairwiseKey {
     algorithm: any,
     keyType: KeyType,
     keyUse: KeyUse,
-    exportable: boolean = true): PromiseLike<DidKey> {
+    exportable: boolean = true): Promise<DidKey> {
     switch (keyType) {
       case KeyType.EC:
-        return this._generateEcPairwiseKey(didMasterKey, crypto, algorithm, keyType, keyUse, exportable);
+        return this.generateEcPairwiseKey(didMasterKey, crypto, algorithm, keyType, keyUse, exportable);
     }
 
     throw new Error(`Pairwise key for key type ${keyType} is not supported`);
@@ -83,13 +83,13 @@ export default class PairwiseKey {
    * @param keyUse Key usage.
    * @param exportable True if the key is exportable.
    */
-  private _generateEcPairwiseKey (
+  private generateEcPairwiseKey (
     didMasterKey: Buffer,
     crypto: any,
     algorithm: any,
     keyType: KeyType,
     keyUse: KeyUse,
-    exportable: boolean = true): PromiseLike<DidKey> {
+    exportable: boolean = true): Promise<DidKey> {
       // Generate peer key
     const alg = { name: 'hmac', hash: { name: 'SHA-256' } };
     let hashDidKey = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, didMasterKey, true);

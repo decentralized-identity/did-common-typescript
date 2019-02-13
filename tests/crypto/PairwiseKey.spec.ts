@@ -22,7 +22,10 @@ describe('PairwiseKey', () => {
       const alg = { name: 'ECDSA', namedCurve: 'K-256', hash: { name: 'SHA-256' } };
       let key = new PairwiseKey('1234567890', 'www.peer.com');
       try {
-        key.generate(masterKey, crypto, alg, KeyType.Oct, KeyUse.Signature);
+        key.generate(masterKey, crypto, alg, KeyType.Oct, KeyUse.Signature)
+        .catch(() => {
+          fail('The catch should not happen because exception occurs before promise is generated');
+        });
       } catch (err) {
         expect(err).toEqual(jasmine.any(Error));
         expect('Pairwise key for key type oct is not supported').toBe(err.message);
@@ -45,10 +48,25 @@ describe('PairwiseKey', () => {
               didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
                 expect(true).toBe(correct);
                 done();
+              })
+              .catch((err) => {
+                fail(`Error occured: '${err}'`);
               });
+            })
+            .catch((err) => {
+              fail(`Error occured: '${err}'`);
             });
+          })
+          .catch((err) => {
+            fail(`Error occured: '${err}'`);
           });
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
         });
+      })
+      .catch((err) => {
+        fail(`Error occured: '${err}'`);
       });
     });
 

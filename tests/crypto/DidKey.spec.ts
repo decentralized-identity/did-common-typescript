@@ -35,6 +35,9 @@ describe('DidKey', () => {
           expect(key.kty).toBe('oct');
           expect(base64url.encode(Buffer.from(sampleKey))).toBe(key.k);
           done();
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
         });
       });
     });
@@ -55,19 +58,25 @@ describe('DidKey', () => {
           expect(key.k).not.toBeNull();
           expect(key.k).not.toBeUndefined();
           done();
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
         });
       });
     });
 
-    /*
-     it('Check throws.', (done) => {
-      // expect(new DidKey(webCryptoClass, { name: 'xxx' }, KeyType.Oct, KeyUse.Encryption, null, true)).toThrowError();
+    it('Check throws.', (done) => {
       let didKey = new DidKey(webCryptoClass, { name: 'xxx' }, KeyType.Oct, KeyUse.Encryption, null, true);
-      expect(() => didKey.jwkKey.then()).toThrowError();
+      didKey.jwkKey.then(() => {
+        fail('should throw exception');
+      })
+      .catch((err) => {
+        expect(err).toBeDefined();
+      });
 
       done();
-     });
-     */
+    });
+
   });
 
   describe('Test signing with oct key', () => {
@@ -86,8 +95,17 @@ describe('DidKey', () => {
             didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
               expect(true).toBe(correct);
               done();
+            })
+            .catch((err) => {
+              fail(`Error occured: '${err}'`);
             });
+          })
+          .catch((err) => {
+            fail(`Error occured: '${err}'`);
           });
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
         });
       });
     });
@@ -105,8 +123,17 @@ describe('DidKey', () => {
             didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
               expect(true).toBe(correct);
               done();
+            })
+            .catch((err) => {
+              fail(`Error occured: '${err}'`);
             });
+          })
+          .catch((err) => {
+            fail(`Error occured: '${err}'`);
           });
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
         });
       });
     });
@@ -116,7 +143,7 @@ describe('DidKey', () => {
     it('secp256k1 sign and verify.', (done) => {
       crytoObjects.forEach((cryptoObj) => {
         console.log(`Crypto object: ${cryptoObj.name}`);
-        const alg = { name: 'ECDSA', namedCurve: 'K-256', hash: { name: 'SHA-256' } };
+        const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
         let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, null, true);
 
         const data = 'abcdefghij';
@@ -125,8 +152,17 @@ describe('DidKey', () => {
             didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
               expect(true).toBe(correct);
               done();
+            })
+            .catch((err) => {
+              fail(`Error occured: '${err}'`);
             });
+          })
+          .catch((err) => {
+            fail(`Error occured: '${err}'`);
           });
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
         });
       });
     });
@@ -135,7 +171,7 @@ describe('DidKey', () => {
       it('secp256k1 sign and verify with imported key.', (done) => {
         crytoObjects.forEach((cryptoObj) => {
           console.log(`Crypto object: ${cryptoObj.name}`);
-          const alg = { name: 'ECDSA', namedCurve: 'K-256', hash: { name: 'SHA-256' } };
+          const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
           let generatedDidKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, null, true);
           generatedDidKey.jwkKey.then((jwk) => {
             let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, jwk, true);
@@ -150,10 +186,25 @@ describe('DidKey', () => {
                   didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
                     expect(true).toBe(correct);
                     done();
+                  })
+                  .catch((err) => {
+                    fail(`Error occured: '${err}'`);
                   });
+                })
+                .catch((err) => {
+                  fail(`Error occured: '${err}'`);
                 });
+              })
+              .catch((err) => {
+                fail(`Error occured: '${err}'`);
               });
+            })
+            .catch((err) => {
+              fail(`Error occured: '${err}'`);
             });
+          })
+          .catch((err) => {
+            fail(`Error occured: '${err}'`);
           });
         });
       });
@@ -162,7 +213,7 @@ describe('DidKey', () => {
     it('secp256k1 import.', (done) => {
       crytoObjects.forEach((cryptoObj) => {
         console.log(`Crypto object: ${cryptoObj.name}`);
-        const alg = { name: 'ECDSA', namedCurve: 'K-256', hash: { name: 'SHA-256' } };
+        const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
 
         // Generate the key pair
         let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, null, true);
@@ -172,6 +223,9 @@ describe('DidKey', () => {
           expect('K-256').toBe(ecKey1.crv);
           expect('EC').toBe(ecKey1.kty);
           done();
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
         });
       });
     });
@@ -181,7 +235,7 @@ describe('DidKey', () => {
         console.log(`Crypto object: ${cryptoObj.name}`);
 
         console.log('Generate my key');
-        let alg: any = { name: 'ECDH', namedCurve: 'K-256' };
+        let alg: any = { name: 'ECDH', namedCurve: 'P-256K' };
         let myDidKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Encryption, null, true);
 
         myDidKey.jwkKey.then((myJwkEcKey) => {
@@ -197,54 +251,24 @@ describe('DidKey', () => {
                   cryptoObj.crypto.subtle.deriveBits(alg, privateEcKey.privateKey, 128).then((bits: any) => {
                     expect(16).toBe(bits.byteLength);
                     done();
+                  })
+                  .catch((err: any) => {
+                    fail(`Error occured: '${err}'`);
                   });
+                })
+                .catch((err: any) => {
+                  fail(`Error occured: '${err}'`);
                 });
+            })
+            .catch((err: any) => {
+              fail(`Error occured: '${err}'`);
             });
+        })
+        .catch((err: any) => {
+          fail(`Error occured: '${err}'`);
         });
       });
     });
 
-/*
-      it('Check PairwiseId generation uniqueness', () => {
-        let inx: number = 0;
-        let results: string[] = [];
-        for (inx=0 ; inx < 1000; inx++){
-          let address: string = `m/${inx}/0`;
-          let pwId: string = pairwiseId.generate(address, 'http://domain.com', 'did:sidetree:ignored');
-          results.push(pwId);
-          expect(1).toBe(results.filter(element => element === pwId).length);
-        }
-    });
-
-    it('Check PairwiseId generation uniqueness with different seed', () => {
-      let seed = Buffer.from('yprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi');
-      let pairwiseId = new PairwiseId(seed);
-
-      let inx: number = 0;
-      for (inx=0 ; inx < 1000; inx++){
-        let address: string = `m/0/${inx}`;
-        let pwId: string = pairwiseId.generate(address, 'http://domain.com', 'did:sidetree:ignored');
-        expect(0).toBe(pairwiseIds.filter(element => element === pwId).length);
-      }
-  });
-
-  it('Check PairwiseId generation uniqueness with different peer', () => {
-    let inx: number = 0;
-    for (inx=0 ; inx < 1000; inx++){
-      let address: string = `m/0/${inx}`;
-      let pwId: string = pairwiseId.generate(address, 'http://domain1.com', 'did:sidetree:ignored');
-      expect(0).toBe(pairwiseIds.filter(element => element === pwId).length);
-    }
-  });
-
-  it('Check PairwiseId generation uniqueness with different did', () => {
-    let inx: number = 0;
-    for (inx=0 ; inx < 1000; inx++){
-      let address: string = `m/0/${inx}`;
-      let pwId: string = pairwiseId.generate(address, 'http://domain.com', 'did:sidetree:ignored1');
-      expect(0).toBe(pairwiseIds.filter(element => element === pwId).length);
-    }
-  });
-*/
   });
 });

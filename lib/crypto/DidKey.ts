@@ -17,14 +17,14 @@ class MasterKey {
   /**
    * Get the master key
    */
-  key: Buffer | null;
+  key: Buffer;
 
   /**
    * Create an instance of DidKey.
    * @param did The DID.
    * @param key The master key.
    */
-  constructor (did: string, key: Buffer | null) {
+  constructor (did: string, key: Buffer) {
     this.did = did;
     this.key = key;
   }
@@ -51,7 +51,7 @@ export default class DidKey {
   private _exportable: boolean;
 
   // Promise used to set the key
-  private _promise: PromiseLike<any>;
+  private _promise: Promise<any>;
 
   // Store jwk key. This is the format returned by exportKey
   private _jwkKey: any;
@@ -63,7 +63,7 @@ export default class DidKey {
   private _didMasterKeys: MasterKey[] = [];
 
   // Set of pairwise keys
-  // private _didPairwiseKeys: PairwiseKey[] = [];
+  private _didPairwiseKeys: Map<string, DidKey> = new Map<string, DidKey>();
 
   /**
    * Create an instance of DidKey.
@@ -79,16 +79,16 @@ export default class DidKey {
     algorithm: any,
     keyType: KeyType,
     keyUse: KeyUse,
-    key: any = null,
+    key: any = undefined,
     exportable: boolean = true
   ) {
     this._crypto = crypto;
-    this._algorithm = algorithm;
     this._keyType = keyType;
     this._keyUse = keyUse;
     this._exportable = exportable;
 
-    this._promise = this._setKey(key);
+    this._algorithm = this.normalizeAlgorithm(algorithm);
+    this._promise = this.setKey(key);
   }
 
   /**
@@ -122,7 +122,7 @@ export default class DidKey {
   /**
    * Gets the key in jwk format.
    */
-  public get jwkKey (): PromiseLike<any> {
+  public get jwkKey (): Promise<any> {
     return this._promise.then((cryptoKey) => {
       if (!this._keyObject) {
         this._keyObject = new KeyObject(this.keyType, cryptoKey);
@@ -134,7 +134,7 @@ export default class DidKey {
       }
 
       return this._crypto.subtle
-        .exportKey('jwk', this._isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey)
+        .exportKey('jwk', this.isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey)
         .then((jwkKey: any) => {
           return (this._jwkKey = jwkKey);
         });
@@ -145,8 +145,8 @@ export default class DidKey {
    * Sign the data with the current key
    * @param data  Data to be signed with the current key
    */
-  public sign (data: Buffer): PromiseLike<ArrayBuffer> {
-    let key = this._isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey;
+  public sign (data: Buffer): Promise<ArrayBuffer> {
+    let key = this.isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey;
 
     if (key) {
       return this._crypto.subtle.sign(this._algorithm, key, data);
@@ -164,8 +164,8 @@ export default class DidKey {
    * @param data  The data signed with the current key
    * @param signature  The signature on the data
    */
-  public verify (data: Buffer, signature: ArrayBuffer): PromiseLike<boolean> {
-    let key = this._isKeyPair ? this._keyObject.publicKey : this._keyObject.secretKey;
+  public verify (data: Buffer, signature: ArrayBuffer): Promise<boolean> {
+    let key = this.isKeyPair ? this._keyObject.publicKey : this._keyObject.secretKey;
 
     if (key) {
       return this._crypto.subtle.verify(this._algorithm, key, signature, data);
@@ -184,14 +184,24 @@ export default class DidKey {
    * @param did  The owner DID
    * @param peerId  The representation of the peer
    */
-  public generatePairwise (seed: Buffer, did: string, peerId: string): PromiseLike<DidKey> {
-    return this._generateDidMasterKey(seed, did, peerId). then((didMasterKey: MasterKey) => {
+  public generatePairwise (seed: Buffer, did: string, peerId: string): Promise<DidKey> {
+    return this.generateDidMasterKey(seed, did, peerId). then((didMasterKey: MasterKey) => {
       switch (this._keyType) {
         case KeyType.EC:
+          let pairwise: DidKey | undefined = this._didPairwiseKeys.get(peerId);
+          if (pairwise) {
+            return new Promise<DidKey>((resolve, reject) => {
+              return pairwise;
+            });
+          }
+
+          // Generate new pairwise key
           const pairwiseKey: PairwiseKey = new PairwiseKey(did, peerId);
           return pairwiseKey.generate(
-            didMasterKey.key ? didMasterKey.key : Buffer.alloc(32), this._crypto, this._algorithm, this._keyType, this._keyUse, this._exportable)
+            didMasterKey.key, this._crypto, this._algorithm, this._keyType, this._keyUse, this._exportable)
           .then((pairwiseDidKey: DidKey) => {
+            // Cache pairwise key
+            this._didPairwiseKeys.set(peerId, pairwiseDidKey);
             return pairwiseDidKey;
           });
         default:
@@ -201,8 +211,19 @@ export default class DidKey {
   }
 
   // True if the key is a key pair
-  private get _isKeyPair (): boolean {
+  private get isKeyPair (): boolean {
     return this._keyType === KeyType.EC || this._keyType === KeyType.RSA;
+  }
+
+  // Normalize the algorithm
+  private normalizeAlgorithm (algorithm: any) {
+    if (algorithm.namedCurve) {
+      if (algorithm.namedCurve === 'P-256K') {
+        algorithm.namedCurve = 'K-256';
+      }
+    }
+
+    return algorithm;
   }
 
   /**
@@ -211,8 +232,8 @@ export default class DidKey {
    * @param did  The owner DID
    * @param peerId  The representation of the peer
    */
-  private _generateDidMasterKey (seed: Buffer, did: string, peerId: string): PromiseLike<MasterKey> {
-    let mk: MasterKey | null = null;
+  private generateDidMasterKey (seed: Buffer, did: string, peerId: string): Promise<MasterKey> {
+    let mk: MasterKey | undefined = undefined;
 
     // Check if key was already generated
     this._didMasterKeys.forEach((masterKey: MasterKey): any => {
@@ -240,10 +261,10 @@ export default class DidKey {
   }
 
   // Set keyUsage
-  private _setKeyUsage (): string[] {
+  private setKeyUsage (): string[] {
     switch (this._keyUse) {
       case KeyUse.Encryption:
-        if (this._isKeyPair) {
+        if (this.isKeyPair) {
           return [ 'deriveKey', 'deriveBits' ];
         }
 
@@ -257,20 +278,20 @@ export default class DidKey {
   }
 
   // Save the key or generate one if not specified by the caller
-  private _setKey (key: Buffer | null): PromiseLike<any> {
+  private setKey (key: Buffer | null): Promise<any> {
     switch (this._keyType) {
       case KeyType.Oct:
-        return this._setOctKey(key);
+        return this.setOctKey(key);
 
       case KeyType.EC:
-        return this._setEcKey(key);
+        return this.setEcKey(key);
     }
 
-    throw new Error(`_setKey: ${this._keyType} is not supported`);
+    throw new Error(`setKey: ${this._keyType} is not supported`);
   }
 
   // Save the oct key or generate one if not specified by the caller
-  private _setOctKey (key: Buffer | null): PromiseLike<any> {
+  private setOctKey (key: Buffer | null): Promise<any> {
     if (!key) {
       // Generate now random buffer
       let length = this._algorithm.length ? this._algorithm.length : 16;
@@ -289,22 +310,16 @@ export default class DidKey {
     }
 
     this._jwkKey = jwkKey;
-    return this._crypto.subtle.importKey('jwk', this._jwkKey, this._algorithm, this._exportable, this._setKeyUsage()).then((keyObject: any) => {
+    return this._crypto.subtle.importKey('jwk', this._jwkKey, this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
       this._keyObject = new KeyObject(this.keyType, keyObject);
       return this._keyObject;
     });
-      /*
-      .catch((err: Error) => {
-        // Re-throw the error as a higher-level error.
-        throw new Error(`import error for key type '${this._keyType}' - '${err.message}'.`);
-      });
-      */
   }
 
   // Save the EC key or generate one if not specified by the caller
-  private _setEcKey (jwkKey: any): PromiseLike<any> {
+  private setEcKey (jwkKey: any): Promise<any> {
     if (!jwkKey) {
-      return this._crypto.subtle.generateKey(this._algorithm, this._exportable, this._setKeyUsage()).then((keyObject: any) => {
+      return this._crypto.subtle.generateKey(this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
         this._keyObject = new KeyObject(this.keyType, keyObject);
         return this._keyObject;
       });
@@ -312,7 +327,7 @@ export default class DidKey {
 
     this._jwkKey = jwkKey;
     return this._crypto.subtle
-      .importKey('jwk', jwkKey, this._algorithm, this._exportable, this._setKeyUsage())
+      .importKey('jwk', jwkKey, this._algorithm, this._exportable, this.setKeyUsage())
       .then((keyObject: any) => {
         this._keyObject = new KeyObject(this.keyType, keyObject);
         if (this._keyObject.isPrivateKey) {
@@ -320,7 +335,7 @@ export default class DidKey {
           // this._crypto.subtle.exportKey('jwk')
           return this._crypto.subtle.exportKey('jwk', this._keyObject.privateKey).then((jwk: any) => {
             return this._crypto.subtle
-              .importKey('jwk', jwk, this._algorithm, this._exportable, this._setKeyUsage())
+              .importKey('jwk', jwk, this._algorithm, this._exportable, this.setKeyUsage())
               .then((pubKeyObject: any) => {
                 keyObject.publicKey = pubKeyObject;
                 return (this._keyObject = new KeyObject(this.keyType, keyObject));

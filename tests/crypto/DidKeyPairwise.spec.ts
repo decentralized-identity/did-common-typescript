@@ -8,23 +8,6 @@ const crypto = new WebCrypto();
 describe('DidKey Pairwise keys', () => {
 
   describe('Test Pairwise key generation', () => {
-
-    it('Check PairwiseId generation uniqueness', () => {
-      let inx: number = 0;
-      let results: string[] = [];
-      const alg = { name: 'ECDSA', namedCurve: 'K-256', hash: { name: 'SHA-256' } };
-      let didKey: DidKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null);
-      for (inx = 0 ; inx < 1000; inx++) {
-        didKey.generatePairwise(seed, `did=${inx}`, 'peer').then((pairwiseKey: DidKey) => {
-          pairwiseKey.jwkKey.then((jwk) => {
-            results.push(jwk.d);
-            console.log(`Check ${jwk.d} ${results.length}`);
-            expect(1).toBe(results.filter(element => element === jwk.d).length);
-          });
-        });
-      }
-    });
-
     let seed = Buffer.from('xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi');
 
     let pairwiseKeys: {pwid: string, inx: number, key: string}[] = [
@@ -36,8 +19,8 @@ describe('DidKey Pairwise keys', () => {
       { pwid: 'peerid-6', inx: 5, key: 'PMhhBrw9LAsYS34DCDFnxeG5eI0noOW8dJbhNW8jZR4' },
       { pwid: 'peerid-7', inx: 6, key: 'aoKDyrnQEwWLTvUlEgnvsaVm-yW8LfvaFRP51Rpo1d8' },
       { pwid: 'peerid-8', inx: 7, key: 'sPGK4xCGBmhjTGVSxzgTNTEr54gHtbTzWRhAHE0YQGY' },
-      { pwid: 'peerid-10', inx: 8, key: 'qKRsC7UkrM82gXZCW4oAeZnJJj7ASFJQkgrK8ppGzxc' },
-      { pwid: 'peerid-9', inx: 9, key: 'jWHSkVVAx5ASBGevjB6Y8WK1WCtvMyK8ThUdynPXtQ8' },
+      { pwid: 'peerid-9', inx: 8, key: 'jWHSkVVAx5ASBGevjB6Y8WK1WCtvMyK8ThUdynPXtQ8' },
+      { pwid: 'peerid-10', inx: 9, key: 'qKRsC7UkrM82gXZCW4oAeZnJJj7ASFJQkgrK8ppGzxc' },
       { pwid: 'peerid-11', inx: 10, key: 'khQkCDzMCLCbt_h5trtLLpLUJry0sh25KeChnlM01po' },
       { pwid: 'peerid-12', inx: 11, key: 'PtGYq1ZcS9LQrqZXAihv6SfCTyxbCKZOq4geiR38JOA' },
       { pwid: 'peerid-13', inx: 12, key: 'xkSbImLPz0ptEBHE7hZNOyZrSmO2sCgWq7ZtL8Jkvc8' },
@@ -130,6 +113,141 @@ describe('DidKey Pairwise keys', () => {
       { pwid: 'peerid-99', inx: 99, key: 'OkGQJ3DbhhbP_TAK0nQVuUE09VEROtP_pfBZvvvbzdE' }
     ];
 
+    it('Check PairwiseId generation uniqueness', () => {
+      let inx: number = 0;
+      let results: string[] = [];
+      const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
+      let didKey: DidKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null);
+      for (inx = 0 ; inx < 1000; inx++) {
+        didKey.generatePairwise(seed, `did=${inx}`, 'peer').then((pairwiseKey: DidKey) => {
+          pairwiseKey.jwkKey.then((jwk) => {
+            results.push(jwk.d);
+            // console.log(`Check ${jwk.d} ${results.length}`);
+            expect(1).toBe(results.filter(element => element === jwk.d).length);
+          })
+          .catch((err) => {
+            fail(`Error occured: '${err}'`);
+          });
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
+        });
+      }
+    });
+
+    it('Check PairwiseId generation uniqueness with different seed', (done) => {
+      let inx: number = 0;
+      let nrIds: number = 100;
+      let ids: string[] = [];
+      for (inx = 0; inx < nrIds; inx++) {
+        ids.push(`peerid-${inx}`);
+      }
+
+      let did: string = 'abcdef';
+      let seed = Buffer.from('yprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi');
+      const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
+      let didKey: DidKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null);
+      inx = 0;
+      for (let pwid of ids) {
+        didKey.generatePairwise(seed, did, pwid).then((pairwiseKey: DidKey) => {
+          pairwiseKey.jwkKey.then((jwk) => {
+            // console.log(`{ pwid: '${pwid}', inx: ${inx++}, key: '${jwk.d}'},`);
+            pairwiseKeys.forEach((element: any) => {
+              if (element.pwid === pwid) {
+                // console.log(`Check ${element.inx}: ${element.key} == ${jwk.d}`);
+                expect(element.key).not.toBe(jwk.d);
+                expect(0).toBe(pairwiseKeys.filter(element => element === jwk.d).length);
+                return;
+              }
+            });
+          })
+          .catch((err) => {
+            fail(`Error occured: '${err}'`);
+          });
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
+        });
+      }
+
+      done();
+    });
+
+    it('Check PairwiseId generation uniqueness with different peer', (done) => {
+      let inx: number = 0;
+      let nrIds: number = 100;
+      let ids: string[] = [];
+      for (inx = 0; inx < nrIds; inx++) {
+        ids.push(`peerid--${inx}`);
+      }
+
+      let did: string = 'abcdef';
+      const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
+      let didKey: DidKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null);
+      inx = 0;
+      for (let pwid of ids) {
+        didKey.generatePairwise(seed, did, pwid).then((pairwiseKey: DidKey) => {
+          pairwiseKey.jwkKey.then((jwk) => {
+            // console.log(`{ pwid: '${pwid}', inx: ${inx++}, key: '${jwk.d}'},`);
+            pairwiseKeys.forEach((element: any) => {
+              if (element.pwid === pwid) {
+                // console.log(`Check ${element.inx}: ${element.key} == ${jwk.d}`);
+                expect(element.key).not.toBe(jwk.d);
+                expect(0).toBe(pairwiseKeys.filter(element => element === jwk.d).length);
+                return;
+              }
+            });
+          })
+          .catch((err) => {
+            fail(`Error occured: '${err}'`);
+          });
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
+        });
+      }
+
+      done();
+    });
+
+    it('Check PairwiseId generation uniqueness with different did', (done) => {
+      let inx: number = 0;
+      let nrIds: number = 100;
+      let ids: string[] = [];
+      for (inx = 0; inx < nrIds; inx++) {
+        ids.push(`peerid-${inx}`);
+      }
+
+      let did: string = 'abcdef';
+      let seed = Buffer.from('yprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi');
+      const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
+      inx = 0;
+      let didKey: DidKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null);
+      for (let pwid of ids) {
+        didKey.generatePairwise(seed, did, pwid).then((pairwiseKey: DidKey) => {
+          pairwiseKey.jwkKey.then((jwk) => {
+            // console.log(`{ pwid: '${pwid}', inx: ${inx++}, key: '${jwk.d}'},`);
+            pairwiseKeys.forEach((element: any) => {
+              if (element.pwid === pwid) {
+                // console.log(`Check ${element.inx}: ${element.key} == ${jwk.d}`);
+                expect(element.key).not.toBe(jwk.d);
+                expect(0).toBe(pairwiseKeys.filter(element => element === jwk.d).length);
+                return;
+              }
+            });
+          })
+          .catch((err) => {
+            fail(`Error occured: '${err}'`);
+          });
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
+        });
+      }
+
+      done();
+    });
+
     it('Check PairwiseId generation', (done) => {
       let inx: number = 0;
       let nrIds: number = 100;
@@ -139,7 +257,7 @@ describe('DidKey Pairwise keys', () => {
       }
 
       let did: string = 'abcdef';
-      const alg = { name: 'ECDSA', namedCurve: 'K-256', hash: { name: 'SHA-256' } };
+      const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
       let didKey: DidKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null);
       inx = 0;
       for (let pwid of ids) {
@@ -153,7 +271,13 @@ describe('DidKey Pairwise keys', () => {
                 return;
               }
             });
+          })
+          .catch((err) => {
+            fail(`Error occured: '${err}'`);
           });
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
         });
       }
 
