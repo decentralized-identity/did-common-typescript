@@ -1,4 +1,5 @@
-import DidPublicKey from './DidPublicKey';
+import DidPublicKey from './IDidDocumentPublicKey';
+import IDidDocument from './IDidDocument';
 
 /**
  * Class for performing various DID document operations.
@@ -19,13 +20,16 @@ export default class DidDocument {
   /** Url of the @context for this document */
   public context: string;
 
-  /** Id of the document (the DID) */
+  /** The DID to which this DID Document pertains. */
   public id: string;
 
   /** Array of public keys associated with the DID */
   public publicKey: DidPublicKey[];
 
-  constructor (json: any) {
+  /** The raw document returned by the resolver. */
+  public rawDocument: IDidDocument;
+
+  constructor (json: IDidDocument) {
     for (let field of ['@context', 'id']) {
       if (!(field in json)) {
         throw new Error(`${field} is required`);
@@ -34,13 +38,31 @@ export default class DidDocument {
     this.context = json['@context'];
     this.id = json.id;
     this.publicKey = (json.publicKey || []);
+    this.rawDocument = json;
   }
 
   /**
    * Gets the matching public key for a given key id
+   *
    * @param id fully qualified key id
    */
   public getPublicKey (id: string): DidPublicKey | undefined {
     return (this.publicKey || []).find(item => item.id === id);
+  }
+
+  /**
+   * Returns all of the the service endpoints contained in this DID Document.
+   */
+  public getServices () {
+    return this.rawDocument.service || [];
+  }
+
+  /**
+   * Returns all of the service endpoints matching the given type.
+   *
+   * @param type The type of service(s) to query.
+   */
+  public getServicesByType (type: string) {
+    return this.getServices().filter(service => service.type === type);
   }
 }
