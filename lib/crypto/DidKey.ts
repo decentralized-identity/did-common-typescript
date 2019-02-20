@@ -87,6 +87,24 @@ export default class DidKey {
     this._keyUse = keyUse;
     this._exportable = exportable;
 
+    // Check algorithm
+    if (!algorithm.name) {
+      throw new Error('Missing property name in algorithm');
+    }
+
+    switch (keyType) {
+      case KeyType.EC:
+        if (algorithm.name !== 'ECDSA' && algorithm.name !== 'ECDH') {
+          throw new Error('For KeyType EC, property name in algorithm must be ECDSA or ECDH');
+        }
+        break;
+
+      case KeyType.RSA:
+        if (algorithm.name !== 'RSA-OAEP') {
+          throw new Error('For KeyType RSA, property name in algorithm must be RSA-OAEP');
+        }
+        break;
+    }
     this._algorithm = this.normalizeAlgorithm(algorithm);
     this._promise = this.setKey(key);
   }

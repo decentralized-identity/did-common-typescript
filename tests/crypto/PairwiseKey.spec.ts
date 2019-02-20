@@ -3,6 +3,7 @@ import DidKey from '../../lib/crypto/DidKey';
 import { KeyType } from '../../lib/crypto/KeyType';
 import { KeyUse } from '../../lib/crypto/KeyUse';
 import WebCrypto from 'node-webcrypto-ossl';
+import bigInt from 'big-integer';
 
 const crypto = new WebCrypto();
 
@@ -72,4 +73,41 @@ describe('PairwiseKey', () => {
 
   });
 
+  fdescribe('components for prime generator', () => {
+    it('Generate a candidate for prime', (done) => {
+      let masterKey: Buffer = Buffer.alloc(32, 1);
+      let key = new PairwiseKey('1234567890', 'www.peer.com');
+      key.generateDeterministicNumberForPrime(crypto, 1024, masterKey, 'www.peer.com').then((p) => {
+        expect(128).toBe(p.byteLength);
+
+        key.generateDeterministicNumberForPrime(crypto, 1024, p, 'www.peer.com').then((q) => {
+          expect(128).toBe(q.byteLength);
+          expect(p).not.toBe(q);
+          done();
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
+        });
+      })
+      .catch((err) => {
+        fail(`Error occured: '${err}'`);
+      });
+    });
+
+    it('Generate a prime', (done) => {
+      let masterKey: Buffer = Buffer.alloc(32, 1);
+      let key = new PairwiseKey('1234567890', 'www.peer.com');
+      key.generateDeterministicNumberForPrime(crypto, 1024, masterKey, 'www.peer.com').then((p) => {
+        expect(128).toBe(p.byteLength);
+
+        let pArray = Array.from(p);  // new Uint8Array(p);
+        let primeP: bigInt.BigIntegerStatic = key.generatePrime(pArray);
+        console.log(primeP.toString());
+        done();
+      })
+      .catch((err) => {
+        fail(`Error occured: '${err}'`);
+      });
+    });
+  });
 });

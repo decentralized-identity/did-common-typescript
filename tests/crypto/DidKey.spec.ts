@@ -74,6 +74,45 @@ describe('DidKey', () => {
         expect(err).toBeDefined();
       });
 
+      try {
+        didKey = new DidKey(webCryptoClass, { }, KeyType.EC, KeyUse.Encryption, null, true);
+        didKey.jwkKey.then(() => {
+          fail('should throw exception');
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
+        });
+      } catch (err) {
+        expect('Missing property name in algorithm').toBe(err.message);
+      }
+
+      try {
+        didKey = new DidKey(webCryptoClass, { name: 'xxx' }, KeyType.EC, KeyUse.Encryption, null, true);
+        didKey.jwkKey.then(() => {
+          fail('should throw exception');
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
+        });
+      } catch (err) {
+        expect('For KeyType EC, property name in algorithm must be ECDSA or ECDH').toBe(err.message);
+      }
+
+      try {
+        didKey = new DidKey(webCryptoClass, { name: 'xxx' }, KeyType.RSA, KeyUse.Encryption, null, true);
+        didKey.jwkKey.then(() => {
+          fail('should throw exception');
+        })
+        .catch((err) => {
+          fail(`Error occured: '${err}'`);
+        });
+      } catch (err) {
+        expect('For KeyType RSA, property name in algorithm must be RSA-OAEP').toBe(err.message);
+      }
+
       done();
     });
 

@@ -5,7 +5,7 @@ import WebCrypto from 'node-webcrypto-ossl';
 
 const crypto = new WebCrypto();
 
-describe('DidKey Pairwise keys', () => {
+describe('DidKey Pairwise keys EC', () => {
 
   describe('Test Pairwise key generation', () => {
     let seed = Buffer.from('xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi');
