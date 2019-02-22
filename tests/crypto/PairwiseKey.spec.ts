@@ -113,7 +113,7 @@ describe('PairwiseKey', () => {
 
   describe('RSA key generator', () => {
     beforeEach(() => {
-      jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000;
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
     });
 
     it('Generate a key pair for signing', (done) => {

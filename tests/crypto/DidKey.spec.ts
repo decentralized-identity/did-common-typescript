@@ -110,7 +110,7 @@ describe('DidKey', () => {
           fail(`Error occured: '${err}'`);
         });
       } catch (err) {
-        expect('For KeyType RSA, property name in algorithm must be RSA-OAEP').toBe(err.message);
+        expect('For KeyType RSA encryption, property name in algorithm must be RSA-OAEP').toBe(err.message);
       }
 
       done();
