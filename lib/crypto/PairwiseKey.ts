@@ -146,19 +146,22 @@ export default class PairwiseKey {
    * @param primeSeed seed for prime generator
    */
   generatePrime (primeSeed: Array<number>): BigIntegerStatic {
-    // make sure candidate is uneven
+    // make sure candidate is uneven, set high order bit
     primeSeed[primeSeed.length - 1] |= 0x1;
-    let e = bigInt(65537);
+    primeSeed[0] |= 0x80;
     let two = bigInt(2);
     let prime = bigInt.fromArray(primeSeed, 256, false);
+    let count = 1;
     while (true) {
       prime = prime.subtract(two);
-      let one = bigInt.gcd(prime, e);
-      if (one.compareTo(bigInt.one) === 0 && prime.isProbablePrime(10)) {
+      // 64 tests give 128 bit security
+      if (prime.isProbablePrime(64)) {
         break;
       }
+      count++;
     }
 
+    console.log(`Number of loops for prime search: ${count}`);
     return prime;
   }
 

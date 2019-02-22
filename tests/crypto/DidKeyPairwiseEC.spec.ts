@@ -8,6 +8,24 @@ const crypto = new WebCrypto();
 describe('DidKey Pairwise keys EC', () => {
 
   describe('Test Pairwise key generation', () => {
+    fit('Test P-256', (done) => {
+      const alg = { name: 'ECDSA', namedCurve: 'P-256', hash: { name: 'SHA-256' } };
+
+      // Generate the key pair
+      let didKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null, true);
+
+      didKey.jwkKey.then((ecKey1) => {
+        expect(ecKey1).not.toBeNull();
+        expect('P-256').toBe(ecKey1.crv);
+        expect('EC').toBe(ecKey1.kty);
+        done();
+      })
+      .catch((err) => {
+        fail(`Error occured: '${err}'`);
+      });
+
+    });
+
     let seed = Buffer.from('xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi');
 
     let pairwiseKeys: {pwid: string, inx: number, key: string}[] = [

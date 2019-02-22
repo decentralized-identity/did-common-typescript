@@ -210,14 +210,16 @@ export default class DidKey {
    */
   public generatePairwise (seed: Buffer, did: string, peerId: string): Promise<DidKey> {
     return this.generateDidMasterKey(seed, did, peerId). then((didMasterKey: MasterKey) => {
+      let pairwise: DidKey | undefined = this._didPairwiseKeys.get(this.mapDidPairwiseKeys(peerId));
+      if (pairwise) {
+        return new Promise<DidKey>((resolve, reject) => {
+          return resolve(pairwise);
+        });
+      }
+  
       switch (this._keyType) {
         case KeyType.EC:
-          let pairwise: DidKey | undefined = this._didPairwiseKeys.get(peerId);
-          if (pairwise) {
-            return new Promise<DidKey>((resolve, reject) => {
-              return pairwise;
-            });
-          }
+        case KeyType.RSA:
 
           // Generate new pairwise key
           const pairwiseKey: PairwiseKey = new PairwiseKey(did, peerId);
@@ -225,13 +227,19 @@ export default class DidKey {
             didMasterKey.key, this._crypto, this._algorithm, this._keyType, this._keyUse, this._exportable)
           .then((pairwiseDidKey: DidKey) => {
             // Cache pairwise key
-            this._didPairwiseKeys.set(peerId, pairwiseDidKey);
+            this._didPairwiseKeys.set(this.mapDidPairwiseKeys(peerId), pairwiseDidKey);
             return pairwiseDidKey;
           });
+
         default:
           throw new Error(`Pairwise key for type '${this._keyType}' is not supported.`);
       }
     });
+  }
+
+  private mapDidPairwiseKeys(peerId: string): string {
+    // TODO add key use if we want different keys for signing and encryption
+    return `${this._keyType}_${peerId}`; 
   }
 
   // True if the key is a key pair
@@ -343,10 +351,13 @@ export default class DidKey {
     });
   }
 
-  // Save the RSA key. Generate is not yet supported
+  // Save the RSA key. 
   private setRsaKey (jwkKey: any): Promise<any> {
     if (!jwkKey) {
-      throw new Error('RSA key generation is not yet supported');
+      return this._crypto.subtle.generateKey(this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
+        this._keyObject = new KeyObject(this.keyType, keyObject);
+        return this._keyObject;
+      });
     }
 
     return this.setKeyPair(jwkKey);
