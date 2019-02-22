@@ -114,4 +114,11 @@ export default class KeyObject {
   public get privateKey (): any {
     return this._privateKey;
   }
+
+  /**
+   * Gets public key
+   */
+  public set publicKey (key) {
+    this._publicKey = key;
+  }
 }

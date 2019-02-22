@@ -148,52 +148,18 @@ export default class PairwiseKey {
   generatePrime (primeSeed: Array<number>): BigIntegerStatic {
     // make sure candidate is uneven
     primeSeed[primeSeed.length - 1] |= 0x1;
+    let e = bigInt(65537);
+    let two = bigInt(2);
     let prime = bigInt.fromArray(primeSeed, 256, false);
+    while (true) {
+      prime = prime.subtract(two);
+      let one = bigInt.gcd(prime, e);
+      if (one.compareTo(bigInt.one) === 0 && prime.isProbablePrime(10)) {
+        break;
+      }
+    }
+
     return prime;
-  }
-
-  /**
-   * Generate the EC pairwise Key.
-   * @param didMasterKey The master key for this did.
-   * @param crypto The crypto object.
-   * @param algorithm Intended algorithm to use for the key.
-   * @param keyType Key type.
-   * @param keyUse Key usage.
-   * @param exportable True if the key is exportable.
-   */
-  private generateEcPairwiseKey (
-    didMasterKey: Buffer,
-    crypto: any,
-    algorithm: any,
-    keyType: KeyType,
-    keyUse: KeyUse,
-    exportable: boolean = true): Promise<DidKey> {
-      // Generate peer key
-    const alg = { name: 'hmac', hash: { name: 'SHA-256' } };
-    let hashDidKey = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, didMasterKey, true);
-    return hashDidKey.jwkKey.then((jwkHmacKey) => {
-      return hashDidKey.sign(Buffer.from(this._peerId))
-        .then((signature: any) => {
-          let ec = new elliptic.ec('secp256k1');
-          let privKey = new BN(Buffer.from(signature));
-          privKey = privKey.umod(ec.curve.n);
-          let pubKey = ec.g.mul(privKey);
-
-          let d = privKey.toArrayLike(Buffer, 'be', 32);
-          let x = pubKey.x.toArrayLike(Buffer, 'be', 32);
-          let y = pubKey.y.toArrayLike(Buffer, 'be', 32);
-          let jwk = {
-            crv: 'K-256',
-            d: base64url.encode(d),
-            x: base64url.encode(x),
-            y: base64url.encode(y),
-            kty: 'EC'
-          };
-
-          this._key = new DidKey(crypto, algorithm, keyType, keyUse, jwk, exportable);
-          return this._key;
-        });
-    });
   }
 
   /**
@@ -223,13 +189,78 @@ export default class PairwiseKey {
         keySize = minimumKeySize;
       }
     }
-/*
-    return this.generateDeterministicNumberForPrime(crypto, keySize/2, didMasterKey, this._peerId).then((pSeed: Buffer) => {
 
-    })
-    */
+    return this.getPrime(crypto, didMasterKey, this._peerId, keySize / 2).then((p) => {
+      let pBuf = Buffer.from(p.toArray(256).value);
 
-    const alg = { name: 'hmac', hash: { name: 'SHA-512' } };
+      return this.getPrime(crypto, pBuf, this._peerId, keySize / 2).then((q) => {
+        // compute key components
+        let modulus = p.multiply(q);
+        let pMinus = p.subtract(bigInt.one);
+        let qMinus = q.subtract(bigInt.one);
+        let phi = pMinus.multiply(qMinus);
+        let e = bigInt(65537);
+        let d = e.modInv(phi);
+        let dp = d.mod(pMinus);
+        let dq = d.mod(qMinus);
+        let qi = q.modInv(p);
+        let jwk = {
+          kty: 'RSA',
+          use: keyUse.toString(),
+          e: this.toBase(e),
+          n: this.toBase(modulus),
+          d: this.toBase(d),
+          p: this.toBase(p),
+          q: this.toBase(q),
+          dp: this.toBase(dp),
+          dq: this.toBase(dq),
+          qi: this.toBase(qi)
+        };
+
+        return new DidKey(crypto, algorithm, keyType, keyUse, jwk);
+      });
+
+    });
+  }
+
+  private getPrime (crypto: any, key: Buffer, data: string, primeSize: number): Promise<any> {
+    const alg = { name: 'hmac', hash: 'SHA-512' };
+    let signingKey = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, key);
+    return signingKey.jwkKey.then((jwk) => {
+      return signingKey.sign(Buffer.from(data)).then((primeSeed: ArrayBuffer) => {
+        return this.generateDeterministicNumberForPrime(crypto, primeSize, Buffer.from(primeSeed), data).then((primeSrc) => {
+          let qArray = Array.from(primeSrc);
+          let prime: bigInt.BigIntegerStatic = this.generatePrime(qArray);
+          let p = new bigInt(prime);
+          return p;
+        });
+      });
+    });
+  }
+
+  private toBase (bigNumber: any): string {
+    let buf = Buffer.from(bigNumber.toArray(256).value);
+    return base64url(buf);
+  }
+
+  /**
+   * Generate the EC pairwise Key.
+   * @param didMasterKey The master key for this did.
+   * @param crypto The crypto object.
+   * @param algorithm Intended algorithm to use for the key.
+   * @param keyType Key type.
+   * @param keyUse Key usage.
+   * @param exportable True if the key is exportable.
+   */
+  private generateEcPairwiseKey (
+    didMasterKey: Buffer,
+    crypto: any,
+    algorithm: any,
+    keyType: KeyType,
+    keyUse: KeyUse,
+    exportable: boolean = true): Promise<DidKey> {
+      // Generate peer key
+    const alg = { name: 'hmac', hash: { name: 'SHA-256' } };
     let hashDidKey = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, didMasterKey, true);
     return hashDidKey.jwkKey.then((jwkHmacKey) => {
       return hashDidKey.sign(Buffer.from(this._peerId))

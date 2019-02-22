@@ -73,7 +73,7 @@ describe('PairwiseKey', () => {
 
   });
 
-  fdescribe('components for prime generator', () => {
+  describe('components for prime generator', () => {
     it('Generate a candidate for prime', (done) => {
       let masterKey: Buffer = Buffer.alloc(32, 1);
       let key = new PairwiseKey('1234567890', 'www.peer.com');
@@ -100,7 +100,7 @@ describe('PairwiseKey', () => {
       key.generateDeterministicNumberForPrime(crypto, 1024, masterKey, 'www.peer.com').then((p) => {
         expect(128).toBe(p.byteLength);
 
-        let pArray = Array.from(p);  // new Uint8Array(p);
+        let pArray = Array.from(p);
         let primeP: bigInt.BigIntegerStatic = key.generatePrime(pArray);
         console.log(primeP.toString());
         done();
@@ -110,4 +110,42 @@ describe('PairwiseKey', () => {
       });
     });
   });
+
+  describe('RSA key generator', () => {
+    beforeEach(() => {
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000;
+    });
+
+    it('Generate a key pair for signing', (done) => {
+      let masterKey: Buffer = Buffer.alloc(32, 1);
+      let key = new PairwiseKey('1234567890', 'www.peer.com');
+      let alg = { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-256' } };
+      key.generate(masterKey, crypto, alg, KeyType.RSA, KeyUse.Signature, true).then((didKey: DidKey) => {
+        expect(didKey).toBeDefined();
+        let data = 'the lazy dog jumped over ... forgot the rest';
+        didKey.jwkKey.then((jwk) => {
+          didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
+            didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
+              expect(true).toBe(correct);
+              done();
+            })
+            .catch((err) => {
+              fail(`Error occured: '${err}'`);
+            });
+          })
+          .catch((err) => {
+            fail(`Error occured: '${err}'`);
+          });
+        })
+      .catch((err) => {
+        fail(`Error occured: '${err}'`);
+      });
+      })
+      .catch((err) => {
+        fail(`Error occured: '${err}'`);
+      });
+    });
+
+  });
+
 });

@@ -100,8 +100,14 @@ export default class DidKey {
         break;
 
       case KeyType.RSA:
-        if (algorithm.name !== 'RSA-OAEP') {
-          throw new Error('For KeyType RSA, property name in algorithm must be RSA-OAEP');
+        if (keyUse === KeyUse.Encryption) {
+          if (algorithm.name !== 'RSA-OAEP') {
+            throw new Error('For KeyType RSA encryption, property name in algorithm must be RSA-OAEP');
+          }
+        } else {
+          if (algorithm.name !== 'RSASSA-PKCS1-v1_5') {
+            throw new Error('For KeyType RSA signatures, property name in algorithm must be RSASSA-PKCS1-v1_5');
+          }
         }
         break;
     }
@@ -303,6 +309,9 @@ export default class DidKey {
 
       case KeyType.EC:
         return this.setEcKey(key);
+
+      case KeyType.RSA:
+        return this.setRsaKey(key);
     }
 
     throw new Error(`setKey: ${this._keyType} is not supported`);
@@ -334,6 +343,15 @@ export default class DidKey {
     });
   }
 
+  // Save the RSA key. Generate is not yet supported
+  private setRsaKey (jwkKey: any): Promise<any> {
+    if (!jwkKey) {
+      throw new Error('RSA key generation is not yet supported');
+    }
+
+    return this.setKeyPair(jwkKey);
+  }
+
   // Save the EC key or generate one if not specified by the caller
   private setEcKey (jwkKey: any): Promise<any> {
     if (!jwkKey) {
@@ -343,6 +361,10 @@ export default class DidKey {
       });
     }
 
+    return this.setKeyPair(jwkKey);
+  }
+
+  private setKeyPair (jwkKey: any): Promise<any> {
     this._jwkKey = jwkKey;
     return this._crypto.subtle
       .importKey('jwk', jwkKey, this._algorithm, this._exportable, this.setKeyUsage())
@@ -350,13 +372,19 @@ export default class DidKey {
         this._keyObject = new KeyObject(this.keyType, keyObject);
         if (this._keyObject.isPrivateKey) {
           // import the public key too
-          // this._crypto.subtle.exportKey('jwk')
           return this._crypto.subtle.exportKey('jwk', this._keyObject.privateKey).then((jwk: any) => {
+            if (this.keyType === KeyType.RSA) {
+              // remove private key
+              jwk.d = jwk.p = jwk.q = jwk.dp = jwk.dq = jwk.qi = undefined;
+            } else {
+              jwk.d = undefined;
+            }
+
             return this._crypto.subtle
               .importKey('jwk', jwk, this._algorithm, this._exportable, this.setKeyUsage())
               .then((pubKeyObject: any) => {
-                keyObject.publicKey = pubKeyObject;
-                return (this._keyObject = new KeyObject(this.keyType, keyObject));
+                this._keyObject.publicKey = pubKeyObject;
+                return this._jwkKey;
               });
           });
         }
