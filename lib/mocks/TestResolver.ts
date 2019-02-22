@@ -1,14 +1,15 @@
-import DidResolver, { ResolveResult } from '../DidResolver';
+import IDidResolver from '../IDidResolver';
+import IDidResolveResult from '../IDidResolveResult';
 import DidDocument from '../DidDocument';
 
 /**
  * A mock resolver designed to return whatever document you want
  */
-export default class TestResolver implements DidResolver {
+export default class TestResolver implements IDidResolver {
   /** Function called when requested */
   private handleRequest?: (did: string) => Promise<DidDocument>;
 
-  async resolve (did: string): Promise<ResolveResult> {
+  async resolve (did: string): Promise<IDidResolveResult> {
     if (!this.handleRequest) {
       throw new Error('TestResolver handler not set');
     }
