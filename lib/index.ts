@@ -5,4 +5,7 @@ export { default as IDidDocumentServiceDescriptor } from './IDidDocumentServiceD
 export { default as IDidResolver } from './IDidResolver';
 export { default as IDidResolveResult } from './IDidResolveResult';
 
-export { default as unitTestExports } from './mocks/TestResolver';
+import TestResolver from './mocks/TestResolver';
+export const unitTestExports = {
+  TestResolver
+};
