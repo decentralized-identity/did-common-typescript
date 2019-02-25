@@ -8,7 +8,7 @@ const crypto = new WebCrypto();
 describe('DidKey Pairwise keys EC', () => {
 
   describe('Test Pairwise key generation', () => {
-    fit('Test P-256', (done) => {
+    it('Test P-256', (done) => {
       const alg = { name: 'ECDSA', namedCurve: 'P-256', hash: { name: 'SHA-256' } };
 
       // Generate the key pair

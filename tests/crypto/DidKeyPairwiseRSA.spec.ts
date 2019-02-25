@@ -137,7 +137,7 @@ describe('DidKey Pairwise keys RSA', () => {
 
     it('Check PairwiseId generation uniqueness with different seed', (done) => {
       let inx: number = 0;
-      let nrIds: number = 100;
+      let nrIds: number = 5;
       let ids: string[] = [];
       for (inx = 0; inx < nrIds; inx++) {
         ids.push(`peerid-${inx}`);
@@ -250,7 +250,7 @@ describe('DidKey Pairwise keys RSA', () => {
 
     it('Check PairwiseId generation', (done) => {
       let inx: number = 0;
-      let nrIds: number = 100;
+      let nrIds: number = 5;
       let ids: string[] = [];
       for (inx = 0; inx < nrIds; inx++) {
         ids.push(`peerid-${inx}`);
@@ -267,7 +267,7 @@ describe('DidKey Pairwise keys RSA', () => {
             pairwiseKeys.forEach((element: any) => {
               if (element.pwid === pwid) {
                 console.log(`Check ${element.inx}: ${element.key} == ${jwk.n}`);
-                //expect(element.key).toBe(jwk.d);
+                // expect(element.key).toBe(jwk.d);
                 return;
               }
             });

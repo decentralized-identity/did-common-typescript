@@ -161,7 +161,13 @@ export default class DidKey {
         .exportKey('jwk', this.isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey)
         .then((jwkKey: any) => {
           return (this._jwkKey = jwkKey);
+        }).catch((err: any) => { 
+          console.error(err);
+          throw new Error(`DidKey:get jwkKey->Export key throwed ${err}`);
         });
+    }).catch((err: any) => {
+      console.error(err);
+      throw new Error(`DidKey:get jwkKey->Returning object throwed ${err}`);
     });
   }
 
@@ -173,7 +179,10 @@ export default class DidKey {
     let key = this.isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey;
 
     if (key) {
-      return this._crypto.subtle.sign(this._algorithm, key, data);
+      return this._crypto.subtle.sign(this._algorithm, key, data).catch((err: any) => { 
+        console.error(err);
+        throw new Error(`DidKey:sign->Signature failed ${err}`);
+      });
     }
 
     if (this._keyObject.isPublicKeyCrypto) {
@@ -192,7 +201,10 @@ export default class DidKey {
     let key = this.isKeyPair ? this._keyObject.publicKey : this._keyObject.secretKey;
 
     if (key) {
-      return this._crypto.subtle.verify(this._algorithm, key, signature, data);
+      return this._crypto.subtle.verify(this._algorithm, key, signature, data).catch((err: any) => { 
+        console.error(err);
+        throw new Error(`DidKey:verify->Verify failed ${err}`);
+      });
     }
 
     if (this._keyObject.isPublicKeyCrypto) {
@@ -213,22 +225,27 @@ export default class DidKey {
       let pairwise: DidKey | undefined = this._didPairwiseKeys.get(this.mapDidPairwiseKeys(peerId));
       if (pairwise) {
         return new Promise<DidKey>((resolve, reject) => {
-          return resolve(pairwise);
+          resolve(pairwise);
+        }).catch((err: any) => {
+          console.error(err);
+          throw new Error(`DidKey:generatePairwise->generatePairwise threw ${err}`);
         });
       }
-  
+
       switch (this._keyType) {
         case KeyType.EC:
         case KeyType.RSA:
 
           // Generate new pairwise key
           const pairwiseKey: PairwiseKey = new PairwiseKey(did, peerId);
-          return pairwiseKey.generate(
-            didMasterKey.key, this._crypto, this._algorithm, this._keyType, this._keyUse, this._exportable)
+          return pairwiseKey.generate(didMasterKey.key, this._crypto, this._algorithm, this._keyType, this._keyUse, this._exportable)
           .then((pairwiseDidKey: DidKey) => {
             // Cache pairwise key
             this._didPairwiseKeys.set(this.mapDidPairwiseKeys(peerId), pairwiseDidKey);
             return pairwiseDidKey;
+          }).catch((err: any) => {
+            console.error(err);
+            throw new Error(`DidKey:generatePairwise->generate threw ${err}`);
           });
 
         default:
@@ -237,9 +254,9 @@ export default class DidKey {
     });
   }
 
-  private mapDidPairwiseKeys(peerId: string): string {
+  private mapDidPairwiseKeys (peerId: string): string {
     // TODO add key use if we want different keys for signing and encryption
-    return `${this._keyType}_${peerId}`; 
+    return `${this._keyType}_${peerId}`;
   }
 
   // True if the key is a key pair
@@ -277,7 +294,7 @@ export default class DidKey {
 
     if (mk) {
       return new Promise((resolve, reject) => {
-        return mk;
+        resolve(mk);
       });
     }
 
@@ -288,7 +305,13 @@ export default class DidKey {
         mk = new MasterKey(did, Buffer.from(signature));
         this._didMasterKeys.push(mk);
         return mk;
+      }).catch((err: any) => {
+        console.error(err);
+        throw new Error(`DidKey:generateDidMasterKey->sign threw ${err}`);
       });
+    }).catch((err: any) => {
+      console.error(err);
+      throw new Error(`DidKey:generateDidMasterKey->get jwkKey threw ${err}`);
     });
   }
 
@@ -313,13 +336,22 @@ export default class DidKey {
   private setKey (key: Buffer): Promise<any> {
     switch (this._keyType) {
       case KeyType.Oct:
-        return this.setOctKey(key);
+        return this.setOctKey(key).catch((err: any) => {
+          console.error(err);
+          throw new Error(`DidKey:setKey->setOctKey threw ${err}`);
+        });
 
       case KeyType.EC:
-        return this.setEcKey(key);
+        return this.setEcKey(key).catch((err: any) => {
+          console.error(err);
+          throw new Error(`DidKey:setKey->setecKey threw ${err}`);
+        });
 
       case KeyType.RSA:
-        return this.setRsaKey(key);
+        return this.setRsaKey(key).catch((err: any) => {
+          console.error(err);
+          throw new Error(`DidKey:setKey->setRsaKey threw ${err}`);
+        });
     }
 
     throw new Error(`setKey: ${this._keyType} is not supported`);
@@ -347,20 +379,27 @@ export default class DidKey {
     this._jwkKey = jwkKey;
     return this._crypto.subtle.importKey('jwk', this._jwkKey, this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
       this._keyObject = new KeyObject(this.keyType, keyObject);
-      return this._keyObject;
+    }).catch((err: any) => {
+      console.error(err);
+      throw new Error(`DidKey:setOctKey->importKey threw ${err}`);
     });
   }
 
-  // Save the RSA key. 
+  // Save the RSA key.
   private setRsaKey (jwkKey: any): Promise<any> {
     if (!jwkKey) {
       return this._crypto.subtle.generateKey(this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
         this._keyObject = new KeyObject(this.keyType, keyObject);
-        return this._keyObject;
+      }).catch((err: any) => {
+        console.error(err);
+        throw new Error(`DidKey:setRsaKey->generateKey threw ${err}`);
       });
     }
 
-    return this.setKeyPair(jwkKey);
+    return this.setKeyPair(jwkKey).catch((err: any) => {
+      console.error(err);
+      throw new Error(`DidKey:setRsaKey->setKeyPair threw ${err}`);
+    });
   }
 
   // Save the EC key or generate one if not specified by the caller
@@ -368,11 +407,16 @@ export default class DidKey {
     if (!jwkKey) {
       return this._crypto.subtle.generateKey(this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
         this._keyObject = new KeyObject(this.keyType, keyObject);
-        return this._keyObject;
+      }).catch((err: any) => {
+        console.error(err);
+        throw new Error(`DidKey:setEcKey->generateKey threw ${err}`);
       });
     }
 
-    return this.setKeyPair(jwkKey);
+    return this.setKeyPair(jwkKey).catch((err: any) => {
+      console.error(err);
+      throw new Error(`DidKey:setEcKey->setKeyPair threw ${err}`);
+    });
   }
 
   private setKeyPair (jwkKey: any): Promise<any> {
@@ -396,9 +440,18 @@ export default class DidKey {
               .then((pubKeyObject: any) => {
                 this._keyObject.publicKey = pubKeyObject;
                 return this._jwkKey;
+              }).catch((err: any) => {
+                console.error(err);
+                throw new Error(`DidKey:setKeyPair->second importKey threw ${err}`);
               });
+          }).catch((err: any) => {
+            console.error(err);
+            throw new Error(`DidKey:setKeyPair->exportKey threw ${err}`);
           });
         }
+      }).catch((err: any) => {
+        console.error(err);
+        throw new Error(`DidKey:setKeyPair->importKey threw ${err}`);
       });
   }
 }

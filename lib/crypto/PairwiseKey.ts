@@ -74,9 +74,15 @@ export default class PairwiseKey {
     exportable: boolean = true): Promise<DidKey> {
     switch (keyType) {
       case KeyType.EC:
-        return this.generateEcPairwiseKey(didMasterKey, crypto, algorithm, keyType, keyUse, exportable);
+        return this.generateEcPairwiseKey(didMasterKey, crypto, algorithm, keyType, keyUse, exportable).catch((err: any) => {
+          console.error(err);
+          throw new Error(`PairwiseKey:generate->generateEcPairwiseKey threw ${err}`);
+        });
       case KeyType.RSA:
-        return this.generateRsaPairwiseKey(didMasterKey, crypto, algorithm, keyType, keyUse, exportable);
+        return this.generateRsaPairwiseKey(didMasterKey, crypto, algorithm, keyType, keyUse, exportable).catch((err: any) => {
+          console.error(err);
+          throw new Error(`PairwiseKey:generate->generateRsaPairwiseKey threw ${err}`);
+        });
     }
 
     throw new Error(`Pairwise key for key type ${keyType} is not supported`);
@@ -99,7 +105,10 @@ export default class PairwiseKey {
       });
     }
 
-    return this.executeRounds(crypto, rounds, 0, didMasterKey, Buffer.from(peerId));
+    return this.executeRounds(crypto, rounds, 0, didMasterKey, Buffer.from(peerId)).catch((err: any) => {
+      console.error(err);
+      throw new Error(`PairwiseKey:generateDeterministicNumberForPrime->executeRounds threw ${err}`);
+    });
   }
 
   /**
@@ -115,9 +124,18 @@ export default class PairwiseKey {
       return deterministicNumber.jwkKey.then((jwk) => {
         return deterministicNumber.sign(data).then((signature) => {
           this._deterministicKey = Buffer.concat([this._deterministicKey, Buffer.from(signature)]);
-          return resolve(this._deterministicKey);
+          resolve(this._deterministicKey);
+        }).catch((err: any) => {
+          console.error(err);
+          throw new Error(`PairwiseKey:generateHashForPrime->sign threw ${err}`);
         });
+      }).catch((err: any) => {
+        console.error(err);
+        throw new Error(`PairwiseKey:generateHashForPrime->get jwkKey threw ${err}`);
       });
+    }).catch((err: any) => {
+      console.error(err);
+      throw new Error(`PairwiseKey:generateHashForPrime->new DidKey threw ${err}`);
     });
   }
 
@@ -136,8 +154,14 @@ export default class PairwiseKey {
       } else {
         return this.executeRounds(crypto, rounds, inx + 1, key, Buffer.from(signature)).then((signature: any) => {
           return this._deterministicKey;
+        }).catch((err: any) => {
+          console.error(err);
+          throw new Error(`PairwiseKey:executeRounds->executeRounds threw ${err}`);
         });
       }
+    }).catch((err: any) => {
+      console.error(err);
+      throw new Error(`PairwiseKey:executeRounds->rounds threw ${err}`);
     });
   }
 
@@ -221,8 +245,14 @@ export default class PairwiseKey {
         };
 
         return new DidKey(crypto, algorithm, keyType, keyUse, jwk);
+      }).catch((err: any) => {
+        console.error(err);
+        throw new Error(`PairwiseKey:generateRsaPairwiseKey->second getPrime threw ${err}`);
       });
 
+    }).catch((err: any) => {
+      console.error(err);
+      throw new Error(`PairwiseKey:generateRsaPairwiseKey->first getPrime threw ${err}`);
     });
   }
 
@@ -236,8 +266,17 @@ export default class PairwiseKey {
           let prime: bigInt.BigIntegerStatic = this.generatePrime(qArray);
           let p = new bigInt(prime);
           return p;
+        }).catch((err: any) => {
+          console.error(err);
+          throw new Error(`PairwiseKey:getPrime->generateDeterministicNumberForPrime threw ${err}`);
         });
+      }).catch((err: any) => {
+        console.error(err);
+        throw new Error(`PairwiseKey:getPrime->sign threw ${err}`);
       });
+    }).catch((err: any) => {
+      console.error(err);
+      throw new Error(`PairwiseKey:getPrime->get jwkKey threw ${err}`);
     });
   }
 
@@ -268,7 +307,22 @@ export default class PairwiseKey {
     return hashDidKey.jwkKey.then((jwkHmacKey) => {
       return hashDidKey.sign(Buffer.from(this._peerId))
         .then((signature: any) => {
-          let ec = new elliptic.ec('secp256k1');
+          let ec = undefined;
+          let curve: string;
+          switch (algorithm.namedCurve) {
+            case 'K-256':
+            case 'P-256K':
+              ec = new elliptic.ec('secp256k1');
+              curve = 'K-256';
+              break;
+            case 'P-256':
+              ec = new elliptic.ec('p256');
+              curve = 'P-256';
+              break;
+            default:
+              throw new Error(`Curve ${algorithm.namedCurve} is not supported`);
+          }
+
           let privKey = new BN(Buffer.from(signature));
           privKey = privKey.umod(ec.curve.n);
           let pubKey = ec.g.mul(privKey);
@@ -277,7 +331,7 @@ export default class PairwiseKey {
           let x = pubKey.x.toArrayLike(Buffer, 'be', 32);
           let y = pubKey.y.toArrayLike(Buffer, 'be', 32);
           let jwk = {
-            crv: 'K-256',
+            crv: curve,
             d: base64url.encode(d),
             x: base64url.encode(x),
             y: base64url.encode(y),
@@ -286,7 +340,13 @@ export default class PairwiseKey {
 
           this._key = new DidKey(crypto, algorithm, keyType, keyUse, jwk, exportable);
           return this._key;
+        }).catch((err: any) => {
+          console.error(err);
+          throw new Error(`PairwiseKey:generateEcPairwiseKey->sign threw ${err}`);
         });
+    }).catch((err: any) => {
+      console.error(err);
+      throw new Error(`PairwiseKey:generateEcPairwiseKey->get jwkKey threw ${err}`);
     });
   }
 
