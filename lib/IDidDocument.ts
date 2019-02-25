@@ -1,5 +1,5 @@
 import IDidDocumentServiceDescriptor from './IDidDocumentServiceDescriptor';
-import IDidPublicKey from './IDidDocumentPublicKey';
+import IDidDocumentPublicKey from './IDidDocumentPublicKey';
 
 /**
  * Interface describing the expected shape of a Decentralized Identity Document.
@@ -13,9 +13,12 @@ export default interface IDidDocument {
   id: string;
 
   /** Array of public keys associated with the DID. */
-  publicKey?: IDidPublicKey[];
+  publicKey?: IDidDocumentPublicKey[];
 
   /** Array of services associated with the DID. */
   service?: IDidDocumentServiceDescriptor[];
+
+  /** Array of authentication methods. */
+  authentication?: (string | object)[];
 
 }
