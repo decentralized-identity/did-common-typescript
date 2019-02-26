@@ -74,6 +74,7 @@ describe('PairwiseKey', () => {
   });
 
   describe('components for prime generator', () => {
+
     it('Generate a candidate for prime', (done) => {
       let masterKey: Buffer = Buffer.alloc(32, 1);
       let key = new PairwiseKey('1234567890', 'www.peer.com');

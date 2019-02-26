@@ -10,46 +10,44 @@ describe('DidKey Pairwise keys RSA', () => {
 
   describe('Test Pairwise key generation', () => {
     let seed = Buffer.from('xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi');
-    it('Check PairwiseId generation', (done) => {
+    beforeEach(() => {
+      jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
+    });
+
+    it('Check PairwiseId generation uniqueness with different peer', (done) => {
       let inx: number = 0;
       let nrIds: number = 2;
-      let ids: string[] = [];
+      let ids: Promise<string>[] = [];
       for (inx = 0; inx < nrIds; inx++) {
-        ids.push(`peerid-${inx}`);
+        ids.push(Promise.resolve(`${inx}`));
       }
 
       let did: string = 'abcdef';
       let alg = { name: 'RSASSA-PKCS1-v1_5', modulusLength: 1024, publicExponent: new Uint8Array([0x01, 0x00, 0x01]), hash: { name: 'SHA-256' } };
       let didKey: DidKey = new DidKey(crypto, alg, KeyType.RSA, KeyUse.Signature, null);
-      inx = 0;
-      let testPromise = new Promise((resolve, reject) => {
-        for (let pwid of ids) {
-          didKey.generatePairwise(seed, did, pwid).then((pairwiseKey: DidKey) => {
-            pairwiseKey.jwkKey.then((jwk) => {
-              // console.log(`{ pwid: '${pwid}', inx: ${inx++}, key: '${jwk.n}'},`);
-              pairwiseKeys.forEach((element: any) => {
-                if (element.pwid === pwid) {
-                  // console.log(`Check ${element.inx}: ${element.key} == ${jwk.n}`);
-                  expect(element.key).toBe(jwk.n);
-                }
-              });
-            })
-          .catch((err) => {
+
+      Promise.all(ids).then((elements) => {
+        elements.forEach((id) => {
+          didKey.generatePairwise(seed, did, id).then((pairwiseKey: DidKey) => {
+            return pairwiseKey.jwkKey;
+          }).then((jwk) => {
+            console.log(`{ "pwid": "${id}", "key": "${jwk.n}"},`);
+            let element = pairwiseKeys.filter((item: any) => {
+              return item.pwid === id;
+            });
+
+            console.log(`${id}: Check ${element[0].pwid}: ${element[0].key} == ${jwk.n}`);
+            expect(element[0].key).toBe(jwk.n);
+            expect(1).toBe(pairwiseKeys.filter((element: any) => element.key === jwk.n).length);
+          }).catch((err) => {
             fail(`Error occured: '${err}'`);
           });
-          })
-        .catch((err) => {
-          fail(`Error occured: '${err}'`);
         });
-        }
+      }).finally(() => {
+        done();
+      }).catch((err) => {
+        fail(`Error occured: '${err}'`);
       });
-      testPromise
-    .finally(() => {
-      done();
-    })
-    .catch((err) => {
-      fail(`Error occured: '${err}'`);
-    });
     });
   });
 });

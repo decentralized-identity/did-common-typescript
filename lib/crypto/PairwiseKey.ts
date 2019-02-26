@@ -122,16 +122,13 @@ export default class PairwiseKey {
       const alg = { name: 'hmac', hash: { name: 'SHA-512' } };
       let deterministicNumber = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, key, true);
       return deterministicNumber.jwkKey.then((jwk) => {
-        return deterministicNumber.sign(data).then((signature) => {
-          this._deterministicKey = Buffer.concat([this._deterministicKey, Buffer.from(signature)]);
-          resolve(this._deterministicKey);
-        }).catch((err: any) => {
-          console.error(err);
-          throw new Error(`PairwiseKey:generateHashForPrime->sign threw ${err}`);
-        });
+        return deterministicNumber.sign(data);
+      }).then((signature) => {
+        this._deterministicKey = Buffer.concat([this._deterministicKey, Buffer.from(signature)]);
+        resolve(this._deterministicKey);
       }).catch((err: any) => {
         console.error(err);
-        throw new Error(`PairwiseKey:generateHashForPrime->get jwkKey threw ${err}`);
+        throw new Error(`PairwiseKey:generateHashForPrime->sign threw ${err}`);
       });
     }).catch((err: any) => {
       console.error(err);
