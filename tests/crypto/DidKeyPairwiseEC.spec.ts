@@ -2,6 +2,7 @@ import DidKey from '../../lib/crypto/DidKey';
 import { KeyType } from '../../lib/crypto/KeyType';
 import { KeyUse } from '../../lib/crypto/KeyUse';
 import WebCrypto from 'node-webcrypto-ossl';
+const pairwiseKeys = require('./Pairwise.EC.json');
 
 const crypto = new WebCrypto();
 
@@ -27,7 +28,7 @@ describe('DidKey Pairwise keys EC', () => {
     });
 
     let seed = Buffer.from('xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi');
-
+/*
     let pairwiseKeys: {pwid: string, inx: number, key: string}[] = [
       { pwid: 'peerid-0', inx: 0, key: 'pWKivj0j2FGXbKO-ET7EY0jeUgtUv7ERleZ-BxJta_Q' },
       { pwid: 'peerid-1', inx: 1, key: 'Cs5abc9y89BPQMv3UjsEVRu9ejc5yMlaDjnY26LGQFY' },
@@ -130,7 +131,7 @@ describe('DidKey Pairwise keys EC', () => {
       { pwid: 'peerid-98', inx: 98, key: 'Zh84KpZ_cUD4d309NABzrSDzjOEDB5_nsytfFjbAuak' },
       { pwid: 'peerid-99', inx: 99, key: 'OkGQJ3DbhhbP_TAK0nQVuUE09VEROtP_pfBZvvvbzdE' }
     ];
-
+*/
     it('Check PairwiseId generation uniqueness', () => {
       let inx: number = 0;
       let results: string[] = [];
@@ -174,7 +175,7 @@ describe('DidKey Pairwise keys EC', () => {
               if (element.pwid === pwid) {
                 // console.log(`Check ${element.inx}: ${element.key} == ${jwk.d}`);
                 expect(element.key).not.toBe(jwk.d);
-                expect(0).toBe(pairwiseKeys.filter(element => element === jwk.d).length);
+                expect(0).toBe(pairwiseKeys.filter((element: any) => element === jwk.d).length);
                 return;
               }
             });
@@ -211,7 +212,7 @@ describe('DidKey Pairwise keys EC', () => {
               if (element.pwid === pwid) {
                 // console.log(`Check ${element.inx}: ${element.key} == ${jwk.d}`);
                 expect(element.key).not.toBe(jwk.d);
-                expect(0).toBe(pairwiseKeys.filter(element => element === jwk.d).length);
+                expect(0).toBe(pairwiseKeys.filter((element: any) => element === jwk.d).length);
                 return;
               }
             });
@@ -249,7 +250,7 @@ describe('DidKey Pairwise keys EC', () => {
               if (element.pwid === pwid) {
                 // console.log(`Check ${element.inx}: ${element.key} == ${jwk.d}`);
                 expect(element.key).not.toBe(jwk.d);
-                expect(0).toBe(pairwiseKeys.filter(element => element === jwk.d).length);
+                expect(0).toBe(pairwiseKeys.filter((element: any) => element === jwk.d).length);
                 return;
               }
             });

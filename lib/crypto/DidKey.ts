@@ -161,7 +161,7 @@ export default class DidKey {
         .exportKey('jwk', this.isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey)
         .then((jwkKey: any) => {
           return (this._jwkKey = jwkKey);
-        }).catch((err: any) => { 
+        }).catch((err: any) => {
           console.error(err);
           throw new Error(`DidKey:get jwkKey->Export key throwed ${err}`);
         });
@@ -179,7 +179,7 @@ export default class DidKey {
     let key = this.isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey;
 
     if (key) {
-      return this._crypto.subtle.sign(this._algorithm, key, data).catch((err: any) => { 
+      return this._crypto.subtle.sign(this._algorithm, key, data).catch((err: any) => {
         console.error(err);
         throw new Error(`DidKey:sign->Signature failed ${err}`);
       });
@@ -201,7 +201,7 @@ export default class DidKey {
     let key = this.isKeyPair ? this._keyObject.publicKey : this._keyObject.secretKey;
 
     if (key) {
-      return this._crypto.subtle.verify(this._algorithm, key, signature, data).catch((err: any) => { 
+      return this._crypto.subtle.verify(this._algorithm, key, signature, data).catch((err: any) => {
         console.error(err);
         throw new Error(`DidKey:verify->Verify failed ${err}`);
       });
