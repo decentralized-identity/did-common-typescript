@@ -94,15 +94,12 @@ describe('DidKey Pairwise keys EC', () => {
       let nrIds: number = 100;
       let ids: Promise<string>[] = [];
       for (inx = 0; inx < nrIds; inx++) {
-        ids.push(Promise.resolve(`${inx}`));
-      }
-
-      let did: string = 'abcdef';
-      const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
-      let didKey: DidKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null);
-
-      Promise.all(ids).then((elements) => {
-        elements.forEach((id) => {
+        // ids.push(Promise.resolve(`${inx}`));
+        ids.push(new Promise((resolve, reject) => {
+          let did: string = 'abcdef';
+          const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
+          let didKey: DidKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null);
+          let id = `${inx}`;
           didKey.generatePairwise(seed, did, id).then((pairwiseKey: DidKey) => {
             return pairwiseKey.jwkKey;
           }).then((jwk) => {
@@ -114,11 +111,15 @@ describe('DidKey Pairwise keys EC', () => {
             console.log(`${id}: Check ${element[0].pwid}: ${element[0].key} == ${jwk.d}`);
             expect(element[0].key).toBe(jwk.d);
             expect(1).toBe(pairwiseKeys.filter((element: any) => element.key === jwk.d).length);
+            resolve();
           }).catch((err) => {
             fail(`Error occured: '${err}'`);
           });
-        });
-      }).finally(() => {
+        }));
+      }
+
+      Promise.all(ids).then((elements) => {
+        console.log('done');
         done();
       }).catch((err) => {
         fail(`Error occured: '${err}'`);

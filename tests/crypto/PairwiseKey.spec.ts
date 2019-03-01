@@ -78,10 +78,10 @@ describe('PairwiseKey', () => {
     it('Generate a candidate for prime', (done) => {
       let masterKey: Buffer = Buffer.alloc(32, 1);
       let key = new PairwiseKey('1234567890', 'www.peer.com');
-      key.generateDeterministicNumberForPrime(crypto, 1024, masterKey, 'www.peer.com').then((p) => {
+      key.generateDeterministicNumberForPrime(crypto, 1024, masterKey, Buffer.from('www.peer.com')).then((p) => {
         expect(128).toBe(p.byteLength);
 
-        key.generateDeterministicNumberForPrime(crypto, 1024, p, 'www.peer.com').then((q) => {
+        key.generateDeterministicNumberForPrime(crypto, 1024, p, Buffer.from('www.peer.com')).then((q) => {
           expect(128).toBe(q.byteLength);
           expect(p).not.toBe(q);
           done();
@@ -98,13 +98,13 @@ describe('PairwiseKey', () => {
     it('Generate a prime', (done) => {
       let masterKey: Buffer = Buffer.alloc(32, 1);
       let key = new PairwiseKey('1234567890', 'www.peer.com');
-      key.generateDeterministicNumberForPrime(crypto, 1024, masterKey, 'www.peer.com').then((p) => {
+      key.generateDeterministicNumberForPrime(crypto, 1024, masterKey, Buffer.from('www.peer.com')).then((p) => {
         expect(128).toBe(p.byteLength);
 
         let pArray = Array.from(p);
         let primeP: bigInt.BigIntegerStatic = key.generatePrime(pArray);
         // tslint:disable-next-line:max-line-length
-        expect('150402132700248112045978320111887438803327136834536242191095181111588212210961231656907437981670525308698790022080391996098647045112034113434039176852012602839641796910170796600486069886405962368890395408880397468280260683252101806113276007230073598516049318395807068211501529212801352936184418259227712512423')
+        expect('150402132700248112045978320111887438803327136834536242191095181111588212210961231656907437981670525308698790022080391996098647045112034113434039176852012602839641796910170796600486069886405962368890395408880397468280260683252101806113276007230073598516049318395807068211501529212801352936184418259227712514547')
         .toBe(primeP.toString());
         done();
       })

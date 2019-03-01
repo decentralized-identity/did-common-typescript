@@ -13,37 +13,36 @@ describe('DidKey Pairwise keys RSA', () => {
     beforeEach(() => {
       jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
     });
-
     it('Check PairwiseId generation uniqueness with different peer', (done) => {
       let inx: number = 0;
-      let nrIds: number = 2;
+      let nrIds: number = 100;
       let ids: Promise<string>[] = [];
       for (inx = 0; inx < nrIds; inx++) {
-        ids.push(Promise.resolve(`${inx}`));
-      }
-
-      let did: string = 'abcdef';
-      let alg = { name: 'RSASSA-PKCS1-v1_5', modulusLength: 1024, publicExponent: new Uint8Array([0x01, 0x00, 0x01]), hash: { name: 'SHA-256' } };
-      let didKey: DidKey = new DidKey(crypto, alg, KeyType.RSA, KeyUse.Signature, null);
-
-      Promise.all(ids).then((elements) => {
-        elements.forEach((id) => {
+        ids.push(new Promise((resolve, reject) => {
+          let did: string = 'abcdef';
+          let alg = { name: 'RSASSA-PKCS1-v1_5', modulusLength: 1024, publicExponent: new Uint8Array([0x01, 0x00, 0x01]), hash: { name: 'SHA-256' } };
+          let didKey: DidKey = new DidKey(crypto, alg, KeyType.RSA, KeyUse.Signature, null);
+          let id = `${inx}`;
           didKey.generatePairwise(seed, did, id).then((pairwiseKey: DidKey) => {
             return pairwiseKey.jwkKey;
           }).then((jwk) => {
-            console.log(`{ "pwid": "${id}", "key": "${jwk.n}"},`);
+             console.log(`{ "pwid": "${id}", "key": "${jwk.d}"},`);
             let element = pairwiseKeys.filter((item: any) => {
               return item.pwid === id;
             });
 
-            console.log(`${id}: Check ${element[0].pwid}: ${element[0].key} == ${jwk.n}`);
-            expect(element[0].key).toBe(jwk.n);
-            expect(1).toBe(pairwiseKeys.filter((element: any) => element.key === jwk.n).length);
+            // console.log(`${id}: Check ${element[0].pwid}: ${element[0].key} == ${jwk.d}`);
+            expect(element[0].key).toBe(jwk.d);
+            expect(1).toBe(pairwiseKeys.filter((element: any) => element.key === jwk.d).length);
+            resolve();
           }).catch((err) => {
             fail(`Error occured: '${err}'`);
           });
-        });
-      }).finally(() => {
+        }));
+      }
+
+      Promise.all(ids).then((elements) => {
+        console.log('done');
         done();
       }).catch((err) => {
         fail(`Error occured: '${err}'`);

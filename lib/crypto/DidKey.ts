@@ -176,6 +176,9 @@ export default class DidKey {
    * @param data  Data to be signed with the current key
    */
   public sign (data: Buffer): Promise<ArrayBuffer> {
+    // console.log(`Sign data: ${base64url(data)}`);
+    // console.log(`Sign key: ${this._jwkKey.k}`);
+
     let key = this.isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey;
 
     if (key) {

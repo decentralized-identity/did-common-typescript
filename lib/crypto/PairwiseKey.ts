@@ -95,7 +95,7 @@ export default class PairwiseKey {
    * @param didMasterKey The DID masterkey
    * @param peerId The peer id
    */
-  public generateDeterministicNumberForPrime (crypto: any, primeSize: number, didMasterKey: Buffer, peerId: string): Promise<Buffer> {
+  public generateDeterministicNumberForPrime (crypto: any, primeSize: number, didMasterKey: Buffer, peerId: Buffer): Promise<Buffer> {
     let numberOfRounds: number = primeSize / (8 * 64);
     this._deterministicKey = Buffer.from('');
     let rounds: Array<(crypto: any, inx: number, key: Buffer, data: Buffer) => Promise<Buffer>> = [];
@@ -114,10 +114,12 @@ export default class PairwiseKey {
   /**
    * Generate a hash used as component for prime number
    * @param crypto The crypto object.
+   * @param inx Round number
    * @param key Signature key
    * @param data Data to sign
    */
   private generateHashForPrime (crypto: any, inx: number, key: Buffer, data: Buffer): Promise<Buffer> {
+    // console.log(`generateHashForPrime=>inx: ${inx}, key ${base64url(key)}, data ${base64url(data)}}`);
     return new Promise<Buffer>((resolve, reject) => {
       const alg = { name: 'hmac', hash: { name: 'SHA-512' } };
       let deterministicNumber = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, key, true);
@@ -174,11 +176,11 @@ export default class PairwiseKey {
     let prime = bigInt.fromArray(primeSeed, 256, false);
     let count = 1;
     while (true) {
-      prime = prime.subtract(two);
       // 64 tests give 128 bit security
       if (prime.isProbablePrime(64)) {
         break;
       }
+      prime = prime.add(two);
       count++;
     }
 
@@ -203,7 +205,7 @@ export default class PairwiseKey {
     keyUse: KeyUse,
     exportable: boolean = true): Promise<DidKey> {
       // Generate peer key
-    let minimumKeySize = 2048;
+    let minimumKeySize = 1024;
     let keySize = minimumKeySize;
     if (algorithm.modulusLength) {
       keySize = algorithm.modulusLength;
@@ -214,11 +216,24 @@ export default class PairwiseKey {
       }
     }
 
-    return this.getPrime(crypto, didMasterKey, this._peerId, keySize / 2).then((p) => {
-      let pBuf = Buffer.from(p.toArray(256).value);
+    // Get peer id
+    let peerId = Buffer.from(this._peerId);
+    let pBase: Buffer;
+    let qBase: Buffer;
+    // Get pbase
+    return this.generateDeterministicNumberForPrime(crypto, keySize / 2, didMasterKey, peerId).then((pbase: Buffer) => {
+      pBase = pbase;
+      return pbase;
+    }).then((pbase: Buffer) => {
+    // Get qbase
+      return this.generateDeterministicNumberForPrime(crypto, keySize / 2, pbase, peerId).then((qbase: Buffer) => {
+        qBase = qbase;
+        return qbase;
+      }).then(() => {
+        let p = this.getPrime(crypto, pBase, peerId);
+        let q = this.getPrime(crypto, qBase, peerId);
 
-      return this.getPrime(crypto, pBuf, this._peerId, keySize / 2).then((q) => {
-        // compute key components
+          // compute key components
         let modulus = p.multiply(q);
         let pMinus = p.subtract(bigInt.one);
         let qMinus = q.subtract(bigInt.one);
@@ -242,9 +257,6 @@ export default class PairwiseKey {
         };
 
         return new DidKey(crypto, algorithm, keyType, keyUse, jwk);
-      }).catch((err: any) => {
-        console.error(err);
-        throw new Error(`PairwiseKey:generateRsaPairwiseKey->second getPrime threw ${err}`);
       });
 
     }).catch((err: any) => {
@@ -253,28 +265,11 @@ export default class PairwiseKey {
     });
   }
 
-  private getPrime (crypto: any, key: Buffer, data: string, primeSize: number): Promise<any> {
-    const alg = { name: 'hmac', hash: 'SHA-512' };
-    let signingKey = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, key);
-    return signingKey.jwkKey.then((jwk) => {
-      return signingKey.sign(Buffer.from(data)).then((primeSeed: ArrayBuffer) => {
-        return this.generateDeterministicNumberForPrime(crypto, primeSize, Buffer.from(primeSeed), data).then((primeSrc) => {
-          let qArray = Array.from(primeSrc);
-          let prime: bigInt.BigIntegerStatic = this.generatePrime(qArray);
-          let p = new bigInt(prime);
-          return p;
-        }).catch((err: any) => {
-          console.error(err);
-          throw new Error(`PairwiseKey:getPrime->generateDeterministicNumberForPrime threw ${err}`);
-        });
-      }).catch((err: any) => {
-        console.error(err);
-        throw new Error(`PairwiseKey:getPrime->sign threw ${err}`);
-      });
-    }).catch((err: any) => {
-      console.error(err);
-      throw new Error(`PairwiseKey:getPrime->get jwkKey threw ${err}`);
-    });
+  private getPrime (crypto: any, primeBase: Buffer, data: Buffer): any {
+    let qArray = Array.from(primeBase);
+    let prime: bigInt.BigIntegerStatic = this.generatePrime(qArray);
+    let p = new bigInt(prime);
+    return p;
   }
 
   private toBase (bigNumber: any): string {
