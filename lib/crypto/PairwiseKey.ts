@@ -79,7 +79,7 @@ export default class PairwiseKey {
           throw new Error(`PairwiseKey:generate->generateEcPairwiseKey threw ${err}`);
         });
       case KeyType.RSA:
-        return this.generateRsaPairwiseKey(didMasterKey, crypto, algorithm, keyType, keyUse, exportable).catch((err: any) => {
+        return this.generateRsaPairwiseKey(didMasterKey, crypto, algorithm, keyType, keyUse).catch((err: any) => {
           console.error(err);
           throw new Error(`PairwiseKey:generate->generateRsaPairwiseKey threw ${err}`);
         });
@@ -118,12 +118,12 @@ export default class PairwiseKey {
    * @param key Signature key
    * @param data Data to sign
    */
-  private generateHashForPrime (crypto: any, inx: number, key: Buffer, data: Buffer): Promise<Buffer> {
-    // console.log(`generateHashForPrime=>inx: ${inx}, key ${base64url(key)}, data ${base64url(data)}}`);
-    return new Promise<Buffer>((resolve, reject) => {
+  private generateHashForPrime (crypto: any, _inx: number, key: Buffer, data: Buffer): Promise<Buffer> {
+    // console.log(`generateHashForPrime=>inx: ${_inx}, key ${base64url(key)}, data ${base64url(data)}}`);
+    return new Promise<Buffer>((resolve) => {
       const alg = { name: 'hmac', hash: { name: 'SHA-512' } };
       let deterministicNumber = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, key, true);
-      return deterministicNumber.jwkKey.then((jwk) => {
+      return deterministicNumber.jwkKey.then(() => {
         return deterministicNumber.sign(data);
       }).then((signature) => {
         this._deterministicKey = Buffer.concat([this._deterministicKey, Buffer.from(signature)]);
@@ -151,7 +151,7 @@ export default class PairwiseKey {
       if (inx + 1 === rounds.length) {
         return this._deterministicKey;
       } else {
-        return this.executeRounds(crypto, rounds, inx + 1, key, Buffer.from(signature)).then((signature: any) => {
+        return this.executeRounds(crypto, rounds, inx + 1, key, Buffer.from(signature)).then(() => {
           return this._deterministicKey;
         }).catch((err: any) => {
           console.error(err);
@@ -202,8 +202,7 @@ export default class PairwiseKey {
     crypto: any,
     algorithm: any,
     keyType: KeyType,
-    keyUse: KeyUse,
-    exportable: boolean = true): Promise<DidKey> {
+    keyUse: KeyUse): Promise<DidKey> {
       // Generate peer key
     let minimumKeySize = 1024;
     let keySize = minimumKeySize;
@@ -230,8 +229,8 @@ export default class PairwiseKey {
         qBase = qbase;
         return qbase;
       }).then(() => {
-        let p = this.getPrime(crypto, pBase, peerId);
-        let q = this.getPrime(crypto, qBase, peerId);
+        let p = this.getPrime(pBase);
+        let q = this.getPrime(qBase);
 
           // compute key components
         let modulus = p.multiply(q);
@@ -265,7 +264,7 @@ export default class PairwiseKey {
     });
   }
 
-  private getPrime (crypto: any, primeBase: Buffer, data: Buffer): any {
+  private getPrime (primeBase: Buffer): any {
     let qArray = Array.from(primeBase);
     let prime: bigInt.BigIntegerStatic = this.generatePrime(qArray);
     let p = new bigInt(prime);
@@ -296,7 +295,7 @@ export default class PairwiseKey {
       // Generate peer key
     const alg = { name: 'hmac', hash: { name: 'SHA-256' } };
     let hashDidKey = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, didMasterKey, true);
-    return hashDidKey.jwkKey.then((jwkHmacKey) => {
+    return hashDidKey.jwkKey.then(() => {
       return hashDidKey.sign(Buffer.from(this._peerId))
         .then((signature: any) => {
           let ec = undefined;

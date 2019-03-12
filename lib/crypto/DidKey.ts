@@ -224,10 +224,10 @@ export default class DidKey {
    * @param peerId  The representation of the peer
    */
   public generatePairwise (seed: Buffer, did: string, peerId: string): Promise<DidKey> {
-    return this.generateDidMasterKey(seed, did, peerId). then((didMasterKey: MasterKey) => {
+    return this.generateDidMasterKey(seed, did). then((didMasterKey: MasterKey) => {
       let pairwise: DidKey | undefined = this._didPairwiseKeys.get(this.mapDidPairwiseKeys(peerId));
       if (pairwise) {
-        return new Promise<DidKey>((resolve, reject) => {
+        return new Promise<DidKey>((resolve) => {
           resolve(pairwise);
         }).catch((err: any) => {
           console.error(err);
@@ -284,7 +284,7 @@ export default class DidKey {
    * @param did  The owner DID
    * @param peerId  The representation of the peer
    */
-  private generateDidMasterKey (seed: Buffer, did: string, peerId: string): Promise<MasterKey> {
+  private generateDidMasterKey (seed: Buffer, did: string): Promise<MasterKey> {
     let mk: MasterKey | undefined = undefined;
 
     // Check if key was already generated
@@ -296,14 +296,14 @@ export default class DidKey {
     });
 
     if (mk) {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         resolve(mk);
       });
     }
 
     let alg = { name: 'hmac', hash: 'SHA-512' };
     let signKey: DidKey = new DidKey(this._crypto, alg, KeyType.Oct, KeyUse.Signature, seed);
-    return signKey.jwkKey.then((jwk) => {
+    return signKey.jwkKey.then(() => {
       return signKey.sign(Buffer.from(did)).then((signature: ArrayBuffer) => {
         mk = new MasterKey(did, Buffer.from(signature));
         this._didMasterKeys.push(mk);
