@@ -156,7 +156,7 @@ export default class DidKey {
         return this._jwkKey;
       }
 
-     this._crypto.subtle
+      this._crypto.subtle
         .exportKey('jwk', this.isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey)
         .then((jwkKey: any) => {
           return (this._jwkKey = jwkKey);

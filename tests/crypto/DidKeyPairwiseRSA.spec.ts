@@ -26,7 +26,7 @@ describe('DidKey Pairwise keys RSA', () => {
           didKey.generatePairwise(seed, did, id).then((pairwiseKey: DidKey) => {
             return pairwiseKey.jwkKey;
           }).then((jwk) => {
-             console.log(`{ "pwid": "${id}", "key": "${jwk.d}"},`);
+            console.log(`{ "pwid": "${id}", "key": "${jwk.d}"},`);
             let element = pairwiseKeys.filter((item: any) => {
               return item.pwid === id;
             });
