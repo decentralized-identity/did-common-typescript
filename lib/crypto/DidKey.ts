@@ -3,7 +3,6 @@ import { KeyUse } from './KeyUse';
 import KeyObject from './KeyObject';
 import PairwiseKey from './PairwiseKey';
 import base64url from 'base64url';
-import { Buffer } from 'buffer';
 
 /**
  * Class to model a master key
@@ -149,7 +148,7 @@ export default class DidKey {
   public get jwkKey (): Promise<any> {
     return this._promise.then((cryptoKey) => {
       if (!this._keyObject) {
-        this._keyObject = new KeyObject(this.keyType, cryptoKey);
+        this._keyObject = cryptoKey;
       }
 
       // Return the jwk key if exists
@@ -157,7 +156,7 @@ export default class DidKey {
         return this._jwkKey;
       }
 
-      return this._crypto.subtle
+     this._crypto.subtle
         .exportKey('jwk', this.isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey)
         .then((jwkKey: any) => {
           return (this._jwkKey = jwkKey);
@@ -381,7 +380,7 @@ export default class DidKey {
 
     this._jwkKey = jwkKey;
     return this._crypto.subtle.importKey('jwk', this._jwkKey, this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
-      this._keyObject = new KeyObject(this.keyType, keyObject);
+      return this._keyObject = new KeyObject(this.keyType, keyObject);
     }).catch((err: any) => {
       console.error(err);
       throw new Error(`DidKey:setOctKey->importKey threw ${err}`);
@@ -392,7 +391,7 @@ export default class DidKey {
   private setRsaKey (jwkKey: any): Promise<any> {
     if (!jwkKey) {
       return this._crypto.subtle.generateKey(this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
-        this._keyObject = new KeyObject(this.keyType, keyObject);
+        return this._keyObject = new KeyObject(this.keyType, keyObject);
       }).catch((err: any) => {
         console.error(err);
         throw new Error(`DidKey:setRsaKey->generateKey threw ${err}`);
@@ -409,7 +408,7 @@ export default class DidKey {
   private setEcKey (jwkKey: any): Promise<any> {
     if (!jwkKey) {
       return this._crypto.subtle.generateKey(this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
-        this._keyObject = new KeyObject(this.keyType, keyObject);
+        return this._keyObject = new KeyObject(this.keyType, keyObject);
       }).catch((err: any) => {
         console.error(err);
         throw new Error(`DidKey:setEcKey->generateKey threw ${err}`);
@@ -442,7 +441,7 @@ export default class DidKey {
               .importKey('jwk', jwk, this._algorithm, this._exportable, this.setKeyUsage())
               .then((pubKeyObject: any) => {
                 this._keyObject.publicKey = pubKeyObject;
-                return this._jwkKey;
+                return this._keyObject;
               }).catch((err: any) => {
                 console.error(err);
                 throw new Error(`DidKey:setKeyPair->second importKey threw ${err}`);
