@@ -16,7 +16,7 @@ describe('DidKey Pairwise keys RSA', () => {
     });
     it('Check PairwiseId generation uniqueness with different peer', (done) => {
       let inx: number = 0;
-      let nrIds: number = 100;
+      let nrIds: number = 2;
       let ids: Promise<string>[] = [];
       for (inx = 0; inx < nrIds; inx++) {
         ids.push(new Promise((resolve, reject) => {

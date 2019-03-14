@@ -2,6 +2,7 @@ import { KeyType } from './KeyType';
 import { KeyUse } from './KeyUse';
 import KeyObject from './KeyObject';
 import PairwiseKey from './PairwiseKey';
+import MasterKey from './MasterKey';
 import base64url from 'base64url';
 import { KeyExport } from './KeyExport';
 
@@ -123,35 +124,6 @@ export default class DidKey {
   /**
    * Gets the key in jwk format.
    */
-  /*
-  public get jwkKey (): Promise<any> {
-    return this._promise.then((cryptoKey) => {
-      if (!this._keyObject) {
-        this._keyObject = cryptoKey;
-      }
-
-      // Return the jwk key if exists
-      if (this._jwkKey) {
-        return this._jwkKey;
-      }
-
-      this._crypto.subtle
-        .exportKey('jwk', this.isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey)
-        .then((jwkKey: any) => {
-          return (this._jwkKey = jwkKey);
-        }).catch((err: any) => {
-          console.error(err);
-          throw new Error(`DidKey:get jwkKey->Export key throwed ${err}`);
-        });
-    }).catch((err: any) => {
-      console.error(err);
-      throw new Error(`DidKey:get jwkKey->Returning object throwed ${err}`);
-    });
-  }
-*/
-  /**
-   * Gets the key in jwk format.
-   */
   public getJwkKey (keyExport: KeyExport): Promise<any> {
     // check if key is already cached
     let keyId = this.getKeyIdentifier(this.keyType, this.keyUse, keyExport);
@@ -179,6 +151,37 @@ export default class DidKey {
       this.cacheJwkKey(keyId, jwk);
       return jwk;
     })
+    .then((jwk: any) => {
+      // Check to save public key
+      if (this.isKeyPair && keyExport === KeyExport.Private) {
+        // Save only public key
+        let jwkPublic: any = {};
+        jwkPublic.kty = jwk.kty;
+        jwkPublic.use = jwk.use;
+        jwkPublic.key_ops = jwk.key_ops;
+        if (this.keyType === KeyType.RSA) {
+          jwkPublic.e = jwk.e;
+          jwkPublic.n = jwk.n;
+        } else {
+          jwkPublic.crv = jwk.crv;
+          jwkPublic.x = jwk.x;
+          jwkPublic.y = jwk.y;
+        }
+
+        // Save public key
+        let keyIdPublick = this.getKeyIdentifier(this.keyType, this.keyUse, KeyExport.Public);
+        this.cacheJwkKey(keyIdPublick, jwkPublic);
+        return this._crypto.subtle.importKey('jwk', jwkPublic, this._algorithm, this._exportable, this.setKeyUsage())
+        .then((keyObject: any) => {
+          this.cacheKeyObject(keyIdPublick, new KeyObject(this.keyType, keyObject));
+          return jwk;
+        }).catch((err: any) => {
+          console.error(err);
+          throw new Error(`DidKey:setOctKey->importKey threw ${err}`);
+        });
+      }
+      return jwk;
+    })
     .catch((err) => {
       throw new Error(`getJwkKey had error: ${err}'`);
     });
@@ -189,23 +192,26 @@ export default class DidKey {
    * @param data  Data to be signed with the current key
    */
   public sign (data: Buffer): Promise<ArrayBuffer> {
-    console.log(`Sign data: ${base64url(data)}`);
-    // console.log(`Sign key: ${this._jwkKey.k}`);
-/*
-    let key = this.isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey;
-
-    if (key) {
-      return this._crypto.subtle.sign(this._algorithm, key, data).catch((err: any) => {
+    let keyExport = this.isKeyPair ? KeyExport.Private : KeyExport.Secret;
+    let keyId = this.getKeyIdentifier(this.keyType, this.keyUse, keyExport);
+    console.log(`Sign data: ${base64url(data)} with ${keyId}`);
+    return this.getJwkKey(keyExport)
+    .then((jwk) => {
+      let keyObject = this.getKeyObject(keyId);
+      if (keyObject) {
+        return this._crypto.subtle.sign(this._algorithm, this.isKeyPair ? (keyObject as any).privateKey : (keyObject as any).secretKey, data)
+        .catch((err: any) => {
+          console.error(err);
+          throw new Error(`DidKey:sign->Signature failed ${err}`);
+        });
+      } else {
+        throw new Error(`No private key for signature: ${keyId}`);
+      }
+    })
+      .catch((err: any) => {
         console.error(err);
-        throw new Error(`DidKey:sign->Signature failed ${err}`);
+        throw new Error(`DidKey:getJwkKey->Failed ${err}`);
       });
-    }
-
-    if (this._keyObject.isPublicKeyCrypto) {
-      throw new Error('The key has no private key for signing');
-    }
-*/
-    throw new Error('No secret for signing');
   }
 
   /**
@@ -215,23 +221,27 @@ export default class DidKey {
    */
   public verify (data: Buffer, signature: ArrayBuffer): Promise<boolean> {
     console.log(`Verify data: ${base64url(data)}`);
-    console.log(`Verify data: ${signature}`);
-    /*
-    let key = this.isKeyPair ? this._keyObject.publicKey : this._keyObject.secretKey;
-
-    if (key) {
-      return this._crypto.subtle.verify(this._algorithm, key, signature, data).catch((err: any) => {
+    let keyExport = this.isKeyPair ? KeyExport.Public : KeyExport.Secret;
+    return this.getJwkKey(keyExport)
+    .then((jwk) => {
+      jwk.key_ops = ['verify'];
+      return this._crypto.subtle.importKey('jwk', jwk, this._algorithm, this._exportable, this.setKeyUsage())
+      .then((keyObject: any) => {
+        return this._crypto.subtle.verify(this._algorithm, keyObject, signature, data)
+        .catch((err: any) => {
+          console.error(err);
+          throw new Error(`DidKey:Verify->Signature failed ${err}`);
+        });
+      }).catch((err: any) => {
         console.error(err);
-        throw new Error(`DidKey:verify->Verify failed ${err}`);
+        throw new Error(`DidKey:verify->importKey threw ${err}`);
       });
-    }
-
-    if (this._keyObject.isPublicKeyCrypto) {
-      throw new Error('The key has no public key for verifying');
-    }
-*/
-    throw new Error('No secret for verifying');
-  }
+    })
+    .catch((err: any) => {
+      console.error(err);
+      throw new Error(`DidKey:getJwkKey->Failed ${err}`);
+    });
+}
 
   /**
    * Generate a pairwise key
@@ -360,14 +370,16 @@ export default class DidKey {
 
     switch (this._keyType) {
       case KeyType.Oct:
-        return this.getOctJwkKey(keyObject).catch((err: any) => {
+        return this.getOctJwkKey(keyObject)
+        .catch((err: any) => {
           console.error(err);
           throw new Error(`DidKey:getJwkKey->getOctJwkKey threw ${err}`);
         });
 
       case KeyType.RSA:
       case KeyType.EC:
-        return this.getKeyPairJwkKey(keyExport, keyObject).catch((err: any) => {
+        return this.getKeyPairJwkKey(keyExport, keyObject)
+        .catch((err: any) => {
           console.error(err);
           throw new Error(`DidKey:getJwkKey->getKeyPairJwkKey threw ${err}`);
         });
@@ -423,12 +435,10 @@ export default class DidKey {
     return true;
   }
 
-  /*
   private getKeyObject (keyId: string): object | undefined {
     // TODO add decryption with a system key
     return this._keyObjects.get(keyId);
   }
-*/
 
   private cacheKeyObject (keyId: string, jwk: object): boolean {
     // TODO add encryption with a system key
@@ -473,7 +483,8 @@ export default class DidKey {
       jwkKey = key;
     }
 
-    return this._crypto.subtle.importKey('jwk', jwkKey, this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
+    return this._crypto.subtle.importKey('jwk', jwkKey, this._algorithm, this._exportable, this.setKeyUsage())
+    .then((keyObject: any) => {
       return new KeyObject(this.keyType, keyObject);
     }).catch((err: any) => {
       console.error(err);

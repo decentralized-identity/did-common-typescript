@@ -130,23 +130,18 @@ describe('DidKey', () => {
         const data = 'abcdefghij';
 
         // Make sure the key is set (promise is completed)
-        didKey.getJwkKey(KeyExport.Secret).then(() => {
-          didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
-            didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
-              expect(true).toBe(correct);
-              done();
-            })
+        didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
+          didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
+            expect(true).toBe(correct);
+            done();
+          })
             .catch((err) => {
               fail(`Error occured: '${err}'`);
             });
-          })
+        })
           .catch((err) => {
             fail(`Error occured: '${err}'`);
           });
-        })
-        .catch((err) => {
-          fail(`Error occured: '${err}'`);
-        });
       });
     });
 
@@ -187,23 +182,20 @@ describe('DidKey', () => {
         let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, null, true);
 
         const data = 'abcdefghij';
-        didKey.getJwkKey(KeyExport.Private).then(() => {
-          didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
-            didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
-              expect(true).toBe(correct);
-              done();
-            })
+        didKey.sign(Buffer.from(data))
+        .then((signature: ArrayBuffer) => {
+          didKey.verify(Buffer.from(data), signature)
+          .then((correct: boolean) => {
+            expect(true).toBe(correct);
+            done();
+          })
             .catch((err) => {
               fail(`Error occured: '${err}'`);
             });
-          })
+        })
           .catch((err) => {
             fail(`Error occured: '${err}'`);
           });
-        })
-        .catch((err) => {
-          fail(`Error occured: '${err}'`);
-        });
       });
     });
 
@@ -217,7 +209,8 @@ describe('DidKey', () => {
             let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, jwk, true);
 
             const data = 'abcdefghij';
-            didKey.getJwkKey(KeyExport.Private).then(() => {
+            didKey.getJwkKey(KeyExport.Private).then((jwk) => {
+              expect(KeyType.EC).toBe(jwk.kty);
               didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
                 // Make sure there is only the public key
                 jwk.d = undefined;

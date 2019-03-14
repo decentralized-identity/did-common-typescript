@@ -1,7 +1,7 @@
 /**
  * Class to model a master key
  */
-class MasterKey {
+export default class MasterKey {
   /**
    * Get the index for master key
    */
