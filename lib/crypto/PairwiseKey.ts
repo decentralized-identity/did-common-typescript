@@ -6,6 +6,7 @@ import DidKey from './DidKey';
 import { KeyType } from './KeyType';
 import { KeyUse } from './KeyUse';
 import { BigIntegerStatic } from 'big-integer';
+import { KeyExport } from './KeyExport';
 const bigInt = require('big-integer');
 
 /**
@@ -123,7 +124,7 @@ export default class PairwiseKey {
     return new Promise<Buffer>((resolve) => {
       const alg = { name: 'hmac', hash: { name: 'SHA-512' } };
       let deterministicNumber = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, key, true);
-      return deterministicNumber.jwkKey.then(() => {
+      return deterministicNumber.getJwkKey(KeyExport.Secret).then(() => {
         return deterministicNumber.sign(data);
       }).then((signature) => {
         this._deterministicKey = Buffer.concat([this._deterministicKey, Buffer.from(signature)]);
@@ -295,7 +296,7 @@ export default class PairwiseKey {
       // Generate peer key
     const alg = { name: 'hmac', hash: { name: 'SHA-256' } };
     let hashDidKey = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, didMasterKey, true);
-    return hashDidKey.jwkKey.then(() => {
+    return hashDidKey.getJwkKey(KeyExport.Secret).then(() => {
       return hashDidKey.sign(Buffer.from(this._peerId))
         .then((signature: any) => {
           let ec = undefined;

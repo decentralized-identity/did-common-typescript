@@ -1,6 +1,7 @@
 import DidKey from '../../lib/crypto/DidKey';
 import { KeyType } from '../../lib/crypto/KeyType';
 import { KeyUse } from '../../lib/crypto/KeyUse';
+import { KeyExport } from '../../lib/crypto/KeyExport';
 import WebCrypto from 'node-webcrypto-ossl';
 const pairwiseKeys = require('./Pairwise.EC.json');
 
@@ -15,7 +16,7 @@ describe('DidKey Pairwise keys EC', () => {
       // Generate the key pair
       let didKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null, true);
 
-      didKey.jwkKey.then((ecKey1) => {
+      didKey.getJwkKey(KeyExport.Private).then((ecKey1) => {
         expect(ecKey1).not.toBeNull();
         expect('P-256').toBe(ecKey1.crv);
         expect('EC').toBe(ecKey1.kty);
@@ -36,7 +37,7 @@ describe('DidKey Pairwise keys EC', () => {
       let didKey: DidKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null);
       for (inx = 0 ; inx < 1000; inx++) {
         didKey.generatePairwise(seed, `did=${inx}`, 'peer').then((pairwiseKey: DidKey) => {
-          pairwiseKey.jwkKey.then((jwk) => {
+          pairwiseKey.getJwkKey(KeyExport.Private).then((jwk) => {
             results.push(jwk.d);
             // console.log(`Check ${jwk.d} ${results.length}`);
             expect(1).toBe(results.filter(element => element === jwk.d).length);
@@ -66,7 +67,7 @@ describe('DidKey Pairwise keys EC', () => {
       inx = 0;
       for (let pwid of ids) {
         didKey.generatePairwise(seed, did, pwid).then((pairwiseKey: DidKey) => {
-          pairwiseKey.jwkKey.then((jwk) => {
+          pairwiseKey.getJwkKey(KeyExport.Private).then((jwk) => {
             // console.log(`{ pwid: '${pwid}', inx: ${inx++}, key: '${jwk.d}'},`);
             pairwiseKeys.forEach((element: any) => {
               if (element.pwid === pwid) {
@@ -101,7 +102,7 @@ describe('DidKey Pairwise keys EC', () => {
           let didKey: DidKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null);
           let id = `${inx}`;
           didKey.generatePairwise(seed, did, id).then((pairwiseKey: DidKey) => {
-            return pairwiseKey.jwkKey;
+            return pairwiseKey.getJwkKey(KeyExport.Private);
           }).then((jwk) => {
             // console.log(`{ "pwid": "${id}", "key": "${jwk.d}"},`);
             let element = pairwiseKeys.filter((item: any) => {
@@ -141,7 +142,7 @@ describe('DidKey Pairwise keys EC', () => {
       let didKey: DidKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, null);
       for (let pwid of ids) {
         didKey.generatePairwise(seed, did, pwid).then((pairwiseKey: DidKey) => {
-          pairwiseKey.jwkKey.then((jwk) => {
+          pairwiseKey.getJwkKey(KeyExport.Private).then((jwk) => {
             // console.log(`{ pwid: '${pwid}', inx: ${inx++}, key: '${jwk.d}'},`);
             pairwiseKeys.forEach((element: any) => {
               if (element.pwid === pwid) {
@@ -178,7 +179,7 @@ describe('DidKey Pairwise keys EC', () => {
       inx = 0;
       for (let pwid of ids) {
         didKey.generatePairwise(seed, did, pwid).then((pairwiseKey: DidKey) => {
-          pairwiseKey.jwkKey.then((jwk) => {
+          pairwiseKey.getJwkKey(KeyExport.Private).then((jwk) => {
             // console.log(`{ pwid: '${pwid}', inx: ${inx++}, key: '${jwk.d}'},`);
             pairwiseKeys.forEach((element: any) => {
               if (element.pwid === pwid) {

@@ -4,6 +4,7 @@ import { KeyUse } from '../../lib/crypto/KeyUse';
 import KeyObject from '../../lib/crypto/KeyObject';
 import WebCrypto from 'node-webcrypto-ossl';
 import base64url from 'base64url';
+import { KeyExport } from '../../lib/crypto/KeyExport';
 
 class CryptoObject {
   /** Name of the crypto object */
@@ -30,7 +31,7 @@ describe('DidKey', () => {
         expect(alg).toEqual(didKey.algorithm);
         expect(true).toEqual(didKey.exportable);
 
-        didKey.jwkKey.then((key) => {
+        didKey.getJwkKey(KeyExport.Secret).then((key: any) => {
           expect(key).not.toBeNull();
           expect(key.kty).toBe('oct');
           expect(base64url.encode(Buffer.from(sampleKey))).toBe(key.k);
@@ -52,7 +53,7 @@ describe('DidKey', () => {
         expect(alg).toEqual(didKey.algorithm);
         expect(true).toEqual(didKey.exportable);
 
-        didKey.jwkKey.then((key) => {
+        didKey.getJwkKey(KeyExport.Secret).then((key) => {
           expect(key).not.toBeNull();
           expect(key.kty).toBe('oct');
           expect(key.k).not.toBeNull();
@@ -67,7 +68,7 @@ describe('DidKey', () => {
 
     it('Check throws.', (done) => {
       let didKey = new DidKey(webCryptoClass, { name: 'xxx' }, KeyType.Oct, KeyUse.Encryption, null, true);
-      didKey.jwkKey.then(() => {
+      didKey.getJwkKey(KeyExport.Secret).then(() => {
         fail('should throw exception');
       })
       .catch((err) => {
@@ -76,7 +77,7 @@ describe('DidKey', () => {
 
       try {
         didKey = new DidKey(webCryptoClass, { }, KeyType.EC, KeyUse.Encryption, null, true);
-        didKey.jwkKey.then(() => {
+        didKey.getJwkKey(KeyExport.Secret).then(() => {
           fail('should throw exception');
         })
         .catch((err) => {
@@ -88,7 +89,7 @@ describe('DidKey', () => {
 
       try {
         didKey = new DidKey(webCryptoClass, { name: 'xxx' }, KeyType.EC, KeyUse.Encryption, null, true);
-        didKey.jwkKey.then(() => {
+        didKey.getJwkKey(KeyExport.Secret).then(() => {
           fail('should throw exception');
         })
         .catch((err) => {
@@ -103,7 +104,7 @@ describe('DidKey', () => {
 
       try {
         didKey = new DidKey(webCryptoClass, { name: 'xxx' }, KeyType.RSA, KeyUse.Encryption, null, true);
-        didKey.jwkKey.then(() => {
+        didKey.getJwkKey(KeyExport.Secret).then(() => {
           fail('should throw exception');
         })
         .catch((err) => {
@@ -129,7 +130,7 @@ describe('DidKey', () => {
         const data = 'abcdefghij';
 
         // Make sure the key is set (promise is completed)
-        didKey.jwkKey.then(() => {
+        didKey.getJwkKey(KeyExport.Secret).then(() => {
           didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
             didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
               expect(true).toBe(correct);
@@ -157,7 +158,7 @@ describe('DidKey', () => {
         let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.Oct, KeyUse.Signature, Buffer.from(sampleKey), true);
 
         const data = 'abcdefghij';
-        didKey.jwkKey.then(() => {
+        didKey.getJwkKey(KeyExport.Secret).then(() => {
           didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
             didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
               expect(true).toBe(correct);
@@ -186,7 +187,7 @@ describe('DidKey', () => {
         let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, null, true);
 
         const data = 'abcdefghij';
-        didKey.jwkKey.then(() => {
+        didKey.getJwkKey(KeyExport.Private).then(() => {
           didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
             didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
               expect(true).toBe(correct);
@@ -212,16 +213,16 @@ describe('DidKey', () => {
           console.log(`Crypto object: ${cryptoObj.name}`);
           const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
           let generatedDidKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, null, true);
-          generatedDidKey.jwkKey.then((jwk) => {
+          generatedDidKey.getJwkKey(KeyExport.Private).then((jwk) => {
             let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, jwk, true);
 
             const data = 'abcdefghij';
-            didKey.jwkKey.then(() => {
+            didKey.getJwkKey(KeyExport.Private).then(() => {
               didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
                 // Make sure there is only the public key
                 jwk.d = undefined;
                 didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, jwk, true);
-                didKey.jwkKey.then(() => {
+                didKey.getJwkKey(KeyExport.Public).then(() => {
                   didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
                     expect(true).toBe(correct);
                     done();
@@ -257,7 +258,7 @@ describe('DidKey', () => {
         // Generate the key pair
         let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, null, true);
 
-        didKey.jwkKey.then((ecKey1) => {
+        didKey.getJwkKey(KeyExport.Private).then((ecKey1) => {
           expect(ecKey1).not.toBeNull();
           expect('K-256').toBe(ecKey1.crv);
           expect('EC').toBe(ecKey1.kty);
@@ -277,7 +278,7 @@ describe('DidKey', () => {
         let alg: any = { name: 'ECDH', namedCurve: 'P-256K' };
         let myDidKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Encryption, null, true);
 
-        myDidKey.jwkKey.then((myJwkEcKey) => {
+        myDidKey.getJwkKey(KeyExport.Private).then((myJwkEcKey) => {
           cryptoObj.crypto.subtle
             .importKey('jwk', myJwkEcKey, alg, true, [ 'deriveKey', 'deriveBits' ])
             .then((ecKey: any) => {

@@ -2,6 +2,7 @@ import PairwiseKey from '../../lib/crypto/PairwiseKey';
 import DidKey from '../../lib/crypto/DidKey';
 import { KeyType } from '../../lib/crypto/KeyType';
 import { KeyUse } from '../../lib/crypto/KeyUse';
+import { KeyExport } from '../../lib/crypto/KeyExport';
 import WebCrypto from 'node-webcrypto-ossl';
 import bigInt from 'big-integer';
 
@@ -39,13 +40,13 @@ describe('PairwiseKey', () => {
       const alg = { name: 'ECDSA', namedCurve: 'K-256', hash: { name: 'SHA-256' } };
       key.generate(masterKey, crypto, alg, KeyType.EC, KeyUse.Signature, true).then((didKey: DidKey) => {
         expect(didKey).toBeDefined();
-        didKey.jwkKey.then((jwk) => {
+        didKey.getJwkKey(KeyExport.Private).then((jwk) => {
           const data = 'abcdefghij';
           didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
             // Make sure there is only the public key
             jwk.d = undefined;
             didKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, jwk, true);
-            didKey.jwkKey.then(() => {
+            didKey.getJwkKey(KeyExport.Public).then(() => {
               didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
                 expect(true).toBe(correct);
                 done();
@@ -126,7 +127,7 @@ describe('PairwiseKey', () => {
       key.generate(masterKey, crypto, alg, KeyType.RSA, KeyUse.Signature, true).then((didKey: DidKey) => {
         expect(didKey).toBeDefined();
         let data = 'the lazy dog jumped over ... forgot the rest';
-        didKey.jwkKey.then((jwk) => {
+        didKey.getJwkKey(KeyExport.Private).then((jwk) => {
           didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
             didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
               expect(true).toBe(correct);

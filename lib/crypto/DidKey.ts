@@ -3,31 +3,7 @@ import { KeyUse } from './KeyUse';
 import KeyObject from './KeyObject';
 import PairwiseKey from './PairwiseKey';
 import base64url from 'base64url';
-
-/**
- * Class to model a master key
- */
-class MasterKey {
-  /**
-   * Get the index for master key
-   */
-  did: string;
-
-  /**
-   * Get the master key
-   */
-  key: Buffer;
-
-  /**
-   * Create an instance of DidKey.
-   * @param did The DID.
-   * @param key The master key.
-   */
-  constructor (did: string, key: Buffer) {
-    this.did = did;
-    this.key = key;
-  }
-}
+import { KeyExport } from './KeyExport';
 
 /**
  * Class to model a key
@@ -49,14 +25,14 @@ export default class DidKey {
   // Store symmetric key
   private _exportable: boolean;
 
-  // Promise used to set the key
-  private _promise: Promise<any>;
+  // Used to store the key passed by the caller
+  private _rawKey: any;
 
-  // Store jwk key. This is the format returned by exportKey
-  private _jwkKey: any;
+ // Store for jwk keys in different formats. This is the format returned by exportKey
+  private _jwkKeys: Map<string, object> = new Map<string, object>();
 
-  // Store key object. This is the format returned by generateKey
-  private _keyObject: any;
+ // Store key objects. This is the format returned by generateKey
+  private _keyObjects: Map<string, object> = new Map<string, object>();
 
   // Set of master keys
   private _didMasterKeys: MasterKey[] = [];
@@ -111,7 +87,9 @@ export default class DidKey {
         break;
     }
     this._algorithm = this.normalizeAlgorithm(algorithm);
-    this._promise = this.setKey(key);
+
+    // Set the raw key. Can be null if the key needs to be generated
+    this._rawKey = key;
   }
 
   /**
@@ -145,6 +123,7 @@ export default class DidKey {
   /**
    * Gets the key in jwk format.
    */
+  /*
   public get jwkKey (): Promise<any> {
     return this._promise.then((cryptoKey) => {
       if (!this._keyObject) {
@@ -169,15 +148,50 @@ export default class DidKey {
       throw new Error(`DidKey:get jwkKey->Returning object throwed ${err}`);
     });
   }
+*/
+  /**
+   * Gets the key in jwk format.
+   */
+  public getJwkKey (keyExport: KeyExport): Promise<any> {
+    // check if key is already cached
+    let keyId = this.getKeyIdentifier(this.keyType, this.keyUse, keyExport);
+    let jwkKey = this.getJwkKeyFromCache(keyId);
+    if (jwkKey) {
+      // Return the key if it already exists
+      return new Promise((resolve) => {
+        resolve(jwkKey);
+      });
+    }
+
+    // Get the key or generate the key if needed
+    return this.getOrGenerateKey(keyId, keyExport)
+    .then((keyObject: KeyObject) => {
+      // Cache the key object
+      this.cacheKeyObject(keyId, keyObject);
+      return keyObject;
+    })
+    .then((keyObject: KeyObject) => {
+      // export to jwk format
+      return this.getJwkKeyFromKeyObject(keyExport, keyObject);
+    })
+    .then((jwk: any) => {
+      // Save jwk format
+      this.cacheJwkKey(keyId, jwk);
+      return jwk;
+    })
+    .catch((err) => {
+      throw new Error(`getJwkKey had error: ${err}'`);
+    });
+  }
 
   /**
    * Sign the data with the current key
    * @param data  Data to be signed with the current key
    */
   public sign (data: Buffer): Promise<ArrayBuffer> {
-    // console.log(`Sign data: ${base64url(data)}`);
+    console.log(`Sign data: ${base64url(data)}`);
     // console.log(`Sign key: ${this._jwkKey.k}`);
-
+/*
     let key = this.isKeyPair ? this._keyObject.privateKey : this._keyObject.secretKey;
 
     if (key) {
@@ -190,7 +204,7 @@ export default class DidKey {
     if (this._keyObject.isPublicKeyCrypto) {
       throw new Error('The key has no private key for signing');
     }
-
+*/
     throw new Error('No secret for signing');
   }
 
@@ -200,6 +214,9 @@ export default class DidKey {
    * @param signature  The signature on the data
    */
   public verify (data: Buffer, signature: ArrayBuffer): Promise<boolean> {
+    console.log(`Verify data: ${base64url(data)}`);
+    console.log(`Verify data: ${signature}`);
+    /*
     let key = this.isKeyPair ? this._keyObject.publicKey : this._keyObject.secretKey;
 
     if (key) {
@@ -212,7 +229,7 @@ export default class DidKey {
     if (this._keyObject.isPublicKeyCrypto) {
       throw new Error('The key has no public key for verifying');
     }
-
+*/
     throw new Error('No secret for verifying');
   }
 
@@ -302,7 +319,8 @@ export default class DidKey {
 
     let alg = { name: 'hmac', hash: 'SHA-512' };
     let signKey: DidKey = new DidKey(this._crypto, alg, KeyType.Oct, KeyUse.Signature, seed);
-    return signKey.jwkKey.then(() => {
+    return signKey.getJwkKey(KeyExport.Secret)
+    .then(() => {
       return signKey.sign(Buffer.from(did)).then((signature: ArrayBuffer) => {
         mk = new MasterKey(did, Buffer.from(signature));
         this._didMasterKeys.push(mk);
@@ -334,126 +352,154 @@ export default class DidKey {
     throw new Error(`The value for KeyUse '${this._keyUse}' is invalid. Needs to be sig or enc`);
   }
 
-  // Save the key or generate one if not specified by the caller
-  private setKey (key: Buffer): Promise<any> {
+  // Transform the KeyObject into a JWK key
+  private getJwkKeyFromKeyObject (keyExport: KeyExport, keyObject: KeyObject): Promise<any> {
+    if (!keyObject) {
+      throw new Error('keyObject argument in getJwkKey cannot be null');
+    }
+
     switch (this._keyType) {
       case KeyType.Oct:
-        return this.setOctKey(key).catch((err: any) => {
+        return this.getOctJwkKey(keyObject).catch((err: any) => {
           console.error(err);
-          throw new Error(`DidKey:setKey->setOctKey threw ${err}`);
-        });
-
-      case KeyType.EC:
-        return this.setEcKey(key).catch((err: any) => {
-          console.error(err);
-          throw new Error(`DidKey:setKey->setecKey threw ${err}`);
+          throw new Error(`DidKey:getJwkKey->getOctJwkKey threw ${err}`);
         });
 
       case KeyType.RSA:
-        return this.setRsaKey(key).catch((err: any) => {
+      case KeyType.EC:
+        return this.getKeyPairJwkKey(keyExport, keyObject).catch((err: any) => {
           console.error(err);
-          throw new Error(`DidKey:setKey->setRsaKey threw ${err}`);
+          throw new Error(`DidKey:getJwkKey->getKeyPairJwkKey threw ${err}`);
         });
     }
 
-    throw new Error(`setKey: ${this._keyType} is not supported`);
+    throw new Error(`DidKey:getJwkKey->${this._keyType} is not supported`);
   }
 
-  // Save the oct key or generate one if not specified by the caller
-  private setOctKey (key: Buffer): Promise<any> {
-    if (!key) {
-      // Generate now random buffer
-      let length = this._algorithm.length ? this._algorithm.length : 16;
-      key = Buffer.alloc(length);
-      key = this._crypto.getRandomValues(new Uint8Array(length));
+  // Transform the oct KeyObject into a JWK key.
+  private getOctJwkKey (keyObject: KeyObject): Promise<any> {
+    return this._crypto.subtle.exportKey('jwk', keyObject.secretKey)
+    .then((jwk: any) => {
+      return jwk;
+    }).catch((err: any) => {
+      console.error(err);
+      throw new Error(`DidKey:getOctJwkKey->exportKey threw ${err}`);
+    });
+  }
+
+  // Transform the key pair KeyObject into a JWK key.
+  private getKeyPairJwkKey (keyExport: KeyExport, keyObject: KeyObject): Promise<any> {
+    let nativeKey = undefined;
+    switch (keyExport) {
+      case KeyExport.Private:
+        nativeKey = keyObject.privateKey;
+        break;
+      case KeyExport.Public:
+        nativeKey = keyObject.publicKey;
+        break;
     }
 
-    // Set the JWK key
-    let jwkKey = {};
-    if (key) {
+    return this._crypto.subtle.exportKey('jwk', nativeKey)
+    .then((jwk: any) => {
+      return jwk;
+    }).catch((err: any) => {
+      console.error(err);
+      throw new Error(`DidKey:getOctJwkKey->exportKey threw ${err}`);
+    });
+  }
+
+  private getKeyIdentifier (keyType: KeyType, keyUse: KeyUse, keyExport: KeyExport): string {
+    return `${keyType}-${keyUse}-${keyExport}`;
+  }
+
+  private getJwkKeyFromCache (keyId: string): object | undefined {
+    // TODO add decryption with a system key
+    return this._jwkKeys.get(keyId);
+  }
+
+  private cacheJwkKey (keyId: string, jwk: object): boolean {
+    // TODO add encryption with a system key
+    this._jwkKeys.set(keyId, jwk);
+    return true;
+  }
+
+  /*
+  private getKeyObject (keyId: string): object | undefined {
+    // TODO add decryption with a system key
+    return this._keyObjects.get(keyId);
+  }
+*/
+
+  private cacheKeyObject (keyId: string, jwk: object): boolean {
+    // TODO add encryption with a system key
+    this._keyObjects.set(keyId, jwk);
+    return true;
+  }
+
+  // Get the key or generate the key if needed
+  // Return a keyObject
+  private getOrGenerateKey (keyId: string, keyExport: KeyExport): Promise<KeyObject> {
+    if (this._rawKey === null) {
+      // indicate key is generated and raw key was not set by caller
+      this._rawKey = undefined;
+
+      // key generation required
+      switch (this.keyType) {
+        case KeyType.EC:
+        case KeyType.RSA:
+          return this.generateKeyPair(keyExport);
+        case KeyType.Oct:
+          return this.generateOctKey();
+        default:
+          throw new Error(`Key type '${this.keyType}' not supported`);
+      }
+    } else return this.setFromRawKey(this._rawKey);
+  }
+
+  // Generate KeyObject from raw key
+  private setFromRawKey (key: any): Promise<KeyObject> {
+    if (!key) {
+      throw new Error('Key must be defined');
+    }
+
+    let jwkKey = undefined;
+    if (!key.kty) {
       jwkKey = {
         kty: 'oct',
-        k: base64url.encode(key),
-        use: this._keyUse
+        use: this.keyUse,
+        k: base64url(key)
       };
+    } else {
+      jwkKey = key;
     }
 
-    this._jwkKey = jwkKey;
-    return this._crypto.subtle.importKey('jwk', this._jwkKey, this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
-      return this._keyObject = new KeyObject(this.keyType, keyObject);
+    return this._crypto.subtle.importKey('jwk', jwkKey, this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
+      return new KeyObject(this.keyType, keyObject);
     }).catch((err: any) => {
       console.error(err);
       throw new Error(`DidKey:setOctKey->importKey threw ${err}`);
     });
   }
 
-  // Save the RSA key.
-  private setRsaKey (jwkKey: any): Promise<any> {
-    if (!jwkKey) {
-      return this._crypto.subtle.generateKey(this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
-        return this._keyObject = new KeyObject(this.keyType, keyObject);
-      }).catch((err: any) => {
-        console.error(err);
-        throw new Error(`DidKey:setRsaKey->generateKey threw ${err}`);
-      });
-    }
-
-    return this.setKeyPair(jwkKey).catch((err: any) => {
+  // Generate an oct key and return a key object
+  private generateOctKey (): Promise<KeyObject> {
+    return this._crypto.subtle.generateKey(this._algorithm, this._exportable, this.setKeyUsage())
+    .then((keyObject: any) => {
+      return new KeyObject(this.keyType, keyObject);
+    }).catch((err: any) => {
       console.error(err);
-      throw new Error(`DidKey:setRsaKey->setKeyPair threw ${err}`);
+      throw new Error(`DidKey:generateOctKey->generateKey threw ${err}`);
     });
   }
 
-  // Save the EC key or generate one if not specified by the caller
-  private setEcKey (jwkKey: any): Promise<any> {
-    if (!jwkKey) {
-      return this._crypto.subtle.generateKey(this._algorithm, this._exportable, this.setKeyUsage()).then((keyObject: any) => {
-        return this._keyObject = new KeyObject(this.keyType, keyObject);
-      }).catch((err: any) => {
-        console.error(err);
-        throw new Error(`DidKey:setEcKey->generateKey threw ${err}`);
-      });
-    }
-
-    return this.setKeyPair(jwkKey).catch((err: any) => {
+  // Generate a key pair and return a key object
+  private generateKeyPair (keyExport: KeyExport): Promise<KeyObject> {
+    return this._crypto.subtle.generateKey(this._algorithm, this._exportable, this.setKeyUsage())
+    .then((keyObject: any) => {
+      return new KeyObject(this.keyType, keyObject);
+    }).catch((err: any) => {
       console.error(err);
-      throw new Error(`DidKey:setEcKey->setKeyPair threw ${err}`);
+      throw new Error(`DidKey:generateKey->generateKey threw ${err}`);
     });
-  }
-
-  private setKeyPair (jwkKey: any): Promise<any> {
-    this._jwkKey = jwkKey;
-    return this._crypto.subtle
-      .importKey('jwk', jwkKey, this._algorithm, this._exportable, this.setKeyUsage())
-      .then((keyObject: any) => {
-        this._keyObject = new KeyObject(this.keyType, keyObject);
-        if (this._keyObject.isPrivateKey) {
-          // import the public key too
-          return this._crypto.subtle.exportKey('jwk', this._keyObject.privateKey).then((jwk: any) => {
-            if (this.keyType === KeyType.RSA) {
-              // remove private key
-              jwk.d = jwk.p = jwk.q = jwk.dp = jwk.dq = jwk.qi = undefined;
-            } else {
-              jwk.d = undefined;
-            }
-
-            return this._crypto.subtle
-              .importKey('jwk', jwk, this._algorithm, this._exportable, this.setKeyUsage())
-              .then((pubKeyObject: any) => {
-                this._keyObject.publicKey = pubKeyObject;
-                return this._keyObject;
-              }).catch((err: any) => {
-                console.error(err);
-                throw new Error(`DidKey:setKeyPair->second importKey threw ${err}`);
-              });
-          }).catch((err: any) => {
-            console.error(err);
-            throw new Error(`DidKey:setKeyPair->exportKey threw ${err}`);
-          });
-        }
-      }).catch((err: any) => {
-        console.error(err);
-        throw new Error(`DidKey:setKeyPair->importKey threw ${err}`);
-      });
   }
 }

@@ -1,6 +1,7 @@
 import DidKey from '../../lib/crypto/DidKey';
 import { KeyType } from '../../lib/crypto/KeyType';
 import { KeyUse } from '../../lib/crypto/KeyUse';
+import { KeyExport } from '../../lib/crypto/KeyExport';
 import WebCrypto from 'node-webcrypto-ossl';
 const pairwiseKeys = require('./Pairwise.RSA.json');
 
@@ -24,7 +25,7 @@ describe('DidKey Pairwise keys RSA', () => {
           let didKey: DidKey = new DidKey(crypto, alg, KeyType.RSA, KeyUse.Signature, null);
           let id = `${inx}`;
           didKey.generatePairwise(seed, did, id).then((pairwiseKey: DidKey) => {
-            return pairwiseKey.jwkKey;
+            return pairwiseKey.getJwkKey(KeyExport.Private);
           }).then((jwk) => {
             console.log(`{ "pwid": "${id}", "key": "${jwk.d}"},`);
             let element = pairwiseKeys.filter((item: any) => {
