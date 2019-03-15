@@ -84,7 +84,11 @@ export default class KeyObject {
    * Gets a value indicating whether the key is a private key only
    */
   public get isPrivateKey (): boolean {
-    return !this.publicKey && this.privateKey;
+    if (this.isPublicKeyCrypto && this.privateKey) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -113,12 +117,5 @@ export default class KeyObject {
    */
   public get privateKey (): any {
     return this._privateKey;
-  }
-
-  /**
-   * Gets public key
-   */
-  public set publicKey (key) {
-    this._publicKey = key;
   }
 }
