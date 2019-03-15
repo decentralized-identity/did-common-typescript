@@ -52,7 +52,7 @@ export default class PairwiseKey {
   }
 
   /**
-   * Get the number of tests needed for prime generatio
+   * Get the number of tests needed for prime generation
    */
   public get primeTests (): number {
     return this._numberOfPrimeTests;

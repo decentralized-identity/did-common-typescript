@@ -195,7 +195,7 @@ export default class DidKey {
   public sign (data: Buffer): Promise<ArrayBuffer> {
     let keyExport = this.isKeyPair ? KeyExport.Private : KeyExport.Secret;
     let keyId = this.getKeyIdentifier(this.keyType, this.keyUse, keyExport);
-    // console.log(`Sign data: ${base64url(data)} with ${keyId}`);
+    //console.log(`Sign data: ${base64url(data)} with ${keyId}`);
     return this.getJwkKey(keyExport)
     .then((jwk) => {
       let keyObject = this.getKeyObject(keyId);
@@ -221,7 +221,7 @@ export default class DidKey {
    * @param signature  The signature on the data
    */
   public verify (data: Buffer, signature: ArrayBuffer): Promise<boolean> {
-    // console.log(`Verify data: ${base64url(data)}`);
+    //console.log(`Verify data: ${base64url(data)}`);
     let keyExport = this.isKeyPair ? KeyExport.Public : KeyExport.Secret;
     return this.getJwkKey(keyExport)
     .then((jwk) => {
