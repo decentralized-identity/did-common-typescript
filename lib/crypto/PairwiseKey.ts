@@ -133,7 +133,6 @@ export default class PairwiseKey {
    * @param data Data to sign
    */
   private generateHashForPrime (crypto: any, _inx: number, key: Buffer, data: Buffer): Promise<Buffer> {
-    // console.log(`generateHashForPrime=>inx: ${_inx}, key ${base64url(key)}, data ${base64url(data)}}`);
     return new Promise<Buffer>((resolve) => {
       const alg = { name: 'hmac', hash: { name: 'SHA-512' } };
       let deterministicNumber = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, key, true);
@@ -179,7 +178,8 @@ export default class PairwiseKey {
   }
 
   /**
-   * Generate a prime number from the seed
+   * Generate a prime number from the seed.
+   * isProbablyPrime is based on the Miller-Rabin prime test.
    * @param primeSeed seed for prime generator
    */
   generatePrime (primeSeed: Array<number>): BigIntegerStatic {
@@ -277,6 +277,9 @@ export default class PairwiseKey {
     });
   }
 
+  /**
+   * Uses primeBase as reference and generate the closest prime number
+   */
   private getPrime (primeBase: Buffer): any {
     let qArray = Array.from(primeBase);
     let prime: bigInt.BigIntegerStatic = this.generatePrime(qArray);
@@ -284,6 +287,10 @@ export default class PairwiseKey {
     return p;
   }
 
+  /**
+   * Convert big number to base64 url.
+   * @param bigNumber Number to convert
+   */
   private toBase (bigNumber: any): string {
     let buf = Buffer.from(bigNumber.toArray(256).value);
     return base64url(buf);

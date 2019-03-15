@@ -32,6 +32,7 @@ describe('DidKey Pairwise keys RSA', () => {
               return item.pwid === id;
             });
 
+            // The following comments is used to generate a test vector reference file. Do not remove.
             // console.log(`${id}: Check ${element[0].pwid}: ${element[0].key} == ${jwk.d}`);
             expect(element[0].key).toBe(jwk.d);
             expect(1).toBe(pairwiseKeys.filter((element: any) => element.key === jwk.d).length);
