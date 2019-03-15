@@ -22,6 +22,7 @@ describe('Constructor', () => {
         let keyObject: KeyObject = new KeyObject(KeyType.Oct, key);
         expect(KeyType.Oct).toBe(keyObject.keyType);
         expect(false).toBe(keyObject.isKeyPair);
+        expect(false).toBe(keyObject.isPrivateKey);
         expect(false).toBe(keyObject.isPublicKeyCrypto);
         done();
       });
@@ -33,6 +34,7 @@ describe('Constructor', () => {
         let keyObject: KeyObject = new KeyObject(KeyType.EC, key);
         expect(KeyType.EC).toBe(keyObject.keyType);
         expect(true).toBe(keyObject.isKeyPair);
+        expect(true).toBe(keyObject.isPrivateKey);
         expect(true).toBe(keyObject.isPublicKeyCrypto);
         done();
       });
@@ -46,6 +48,7 @@ describe('Constructor', () => {
             let keyObject: KeyObject = new KeyObject(KeyType.EC, key);
             expect(KeyType.EC).toBe(keyObject.keyType);
             expect(false).toBe(keyObject.isKeyPair);
+            expect(true).toBe(keyObject.isPrivateKey);
             expect(true).toBe(keyObject.isPublicKeyCrypto);
             done();
           });
@@ -61,6 +64,7 @@ describe('Constructor', () => {
             let keyObject: KeyObject = new KeyObject(KeyType.EC, key);
             expect(KeyType.EC).toBe(keyObject.keyType);
             expect(false).toBe(keyObject.isKeyPair);
+            expect(false).toBe(keyObject.isPrivateKey);
             expect(true).toBe(keyObject.isPublicKeyCrypto);
             done();
           });

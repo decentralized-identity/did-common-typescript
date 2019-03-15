@@ -1,4 +1,7 @@
-export { default as DidDocument } from './DidDocument';
+export { default as DidKey } from './crypto/DidKey';
+export { default as KeyUse } from './crypto/KeyUse';
+export { default as KeyType } from './crypto/KeyType';
+export { default as KeyExport } from './crypto/KeyExport';
 export { default as IDidDocument } from './IDidDocument';
 export { default as IDidDocumentPublicKey } from './IDidDocumentPublicKey';
 export { default as IDidDocumentServiceDescriptor } from './IDidDocumentServiceDescriptor';
