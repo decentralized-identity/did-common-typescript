@@ -137,7 +137,7 @@ export default class DidKey {
     }
 
     // Get the key or generate the key if needed
-    return this.getOrGenerateKey(keyId)
+    return this.getOrGenerateKey()
     .then((keyObject: KeyObject) => {
       // Cache the key object
       this.cacheKeyObject(keyId, keyObject);
@@ -197,7 +197,7 @@ export default class DidKey {
     let keyId = this.getKeyIdentifier(this.keyType, this.keyUse, keyExport);
     // console.log(`Sign data: ${base64url(data)} with ${keyId}`);
     return this.getJwkKey(keyExport)
-    .then((jwk) => {
+    .then(() => {
       let keyObject = this.getKeyObject(keyId);
       if (keyObject) {
         return this._crypto.subtle.sign(this._algorithm, this.isKeyPair ? (keyObject as any).privateKey : (keyObject as any).secretKey, data)
@@ -251,6 +251,7 @@ export default class DidKey {
    * @param peerId  The representation of the peer
    */
   public generatePairwise (seed: Buffer, did: string, peerId: string): Promise<DidKey> {
+    let pairwiseKey: DidKey;
     return this.generateDidMasterKey(seed, did). then((didMasterKey: MasterKey) => {
       let pairwise: DidKey | undefined = this._didPairwiseKeys.get(this.mapDidPairwiseKeys(peerId));
       if (pairwise) {
@@ -273,7 +274,8 @@ export default class DidKey {
             // Cache pairwise key
             this._didPairwiseKeys.set(this.mapDidPairwiseKeys(peerId), pairwiseDidKey);
             return pairwiseDidKey;
-          }).catch((err: any) => {
+          })
+          .catch((err: any) => {
             console.error(err);
             throw new Error(`DidKey:generatePairwise->generate threw ${err}`);
           });
@@ -281,7 +283,15 @@ export default class DidKey {
         default:
           throw new Error(`Pairwise key for type '${this._keyType}' is not supported.`);
       }
-    });
+    })
+    .then((pairwise: DidKey) => {
+      // Store private and public key.
+      pairwiseKey = pairwise;
+      return pairwise.getJwkKey(KeyExport.Private);
+    })
+      .then(() => {
+        return pairwiseKey;
+      });
   }
 
   private mapDidPairwiseKeys (peerId: string): string {
@@ -332,7 +342,8 @@ export default class DidKey {
     let signKey: DidKey = new DidKey(this._crypto, alg, KeyType.Oct, KeyUse.Signature, seed);
     return signKey.getJwkKey(KeyExport.Secret)
     .then(() => {
-      return signKey.sign(Buffer.from(did)).then((signature: ArrayBuffer) => {
+      return signKey.sign(Buffer.from(did))
+      .then((signature: ArrayBuffer) => {
         mk = new MasterKey(did, Buffer.from(signature));
         this._didMasterKeys.push(mk);
         return mk;
@@ -449,7 +460,7 @@ export default class DidKey {
 
   // Get the key or generate the key if needed
   // Return a keyObject
-  private getOrGenerateKey (keyId: string): Promise<KeyObject> {
+  private getOrGenerateKey (): Promise<KeyObject> {
     if (this._rawKey === null) {
       // indicate key is generated and raw key was not set by caller
       this._rawKey = undefined;

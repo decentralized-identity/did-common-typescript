@@ -308,49 +308,44 @@ export default class PairwiseKey {
       // Generate peer key
     const alg = { name: 'hmac', hash: { name: 'SHA-256' } };
     let hashDidKey = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, didMasterKey, true);
-    return hashDidKey.getJwkKey(KeyExport.Secret).then(() => {
-      return hashDidKey.sign(Buffer.from(this._peerId))
-        .then((signature: any) => {
-          let ec = undefined;
-          let curve: string;
-          switch (algorithm.namedCurve) {
-            case 'K-256':
-            case 'P-256K':
-              ec = new elliptic.ec('secp256k1');
-              curve = 'K-256';
-              break;
-            case 'P-256':
-              ec = new elliptic.ec('p256');
-              curve = 'P-256';
-              break;
-            default:
-              throw new Error(`Curve ${algorithm.namedCurve} is not supported`);
-          }
+    return hashDidKey.sign(Buffer.from(this._peerId))
+    .then((signature: any) => {
+      let ec = undefined;
+      let curve: string;
+      switch (algorithm.namedCurve) {
+        case 'K-256':
+        case 'P-256K':
+          ec = new elliptic.ec('secp256k1');
+          curve = 'K-256';
+          break;
+        case 'P-256':
+          ec = new elliptic.ec('p256');
+          curve = 'P-256';
+          break;
+        default:
+          throw new Error(`Curve ${algorithm.namedCurve} is not supported`);
+      }
 
-          let privKey = new BN(Buffer.from(signature));
-          privKey = privKey.umod(ec.curve.n);
-          let pubKey = ec.g.mul(privKey);
+      let privKey = new BN(Buffer.from(signature));
+      privKey = privKey.umod(ec.curve.n);
+      let pubKey = ec.g.mul(privKey);
 
-          let d = privKey.toArrayLike(Buffer, 'be', 32);
-          let x = pubKey.x.toArrayLike(Buffer, 'be', 32);
-          let y = pubKey.y.toArrayLike(Buffer, 'be', 32);
-          let jwk = {
-            crv: curve,
-            d: base64url.encode(d),
-            x: base64url.encode(x),
-            y: base64url.encode(y),
-            kty: 'EC'
-          };
+      let d = privKey.toArrayLike(Buffer, 'be', 32);
+      let x = pubKey.x.toArrayLike(Buffer, 'be', 32);
+      let y = pubKey.y.toArrayLike(Buffer, 'be', 32);
+      let jwk = {
+        crv: curve,
+        d: base64url.encode(d),
+        x: base64url.encode(x),
+        y: base64url.encode(y),
+        kty: 'EC'
+      };
 
-          this._key = new DidKey(crypto, algorithm, keyType, keyUse, jwk, exportable);
-          return this._key;
-        }).catch((err: any) => {
-          console.error(err);
-          throw new Error(`PairwiseKey:generateEcPairwiseKey->sign threw ${err}`);
-        });
+      this._key = new DidKey(crypto, algorithm, keyType, keyUse, jwk, exportable);
+      return this._key;
     }).catch((err: any) => {
       console.error(err);
-      throw new Error(`PairwiseKey:generateEcPairwiseKey->get jwkKey threw ${err}`);
+      throw new Error(`PairwiseKey:generateEcPairwiseKey->sign threw ${err}`);
     });
   }
 
