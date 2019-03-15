@@ -15,7 +15,6 @@ describe('PairwiseKey', () => {
       expect('1234567890-www.peer.com').toBe(key.id);
       expect(key.key).toBeUndefined();
     });
-
   });
 
   describe('generate', () => {
@@ -107,6 +106,7 @@ describe('PairwiseKey', () => {
         // tslint:disable-next-line:max-line-length
         expect('150402132700248112045978320111887438803327136834536242191095181111588212210961231656907437981670525308698790022080391996098647045112034113434039176852012602839641796910170796600486069886405962368890395408880397468280260683252101806113276007230073598516049318395807068211501529212801352936184418259227712514547')
         .toBe(primeP.toString());
+        expect(key.primeTests).toBeGreaterThan(0);
         done();
       })
       .catch((err) => {

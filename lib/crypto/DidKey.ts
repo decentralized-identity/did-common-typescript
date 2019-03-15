@@ -87,6 +87,7 @@ export default class DidKey {
         }
         break;
     }
+
     this._algorithm = this.normalizeAlgorithm(algorithm);
 
     // Set the raw key. Can be null if the key needs to be generated
@@ -136,7 +137,7 @@ export default class DidKey {
     }
 
     // Get the key or generate the key if needed
-    return this.getOrGenerateKey(keyId, keyExport)
+    return this.getOrGenerateKey(keyId)
     .then((keyObject: KeyObject) => {
       // Cache the key object
       this.cacheKeyObject(keyId, keyObject);
@@ -194,7 +195,7 @@ export default class DidKey {
   public sign (data: Buffer): Promise<ArrayBuffer> {
     let keyExport = this.isKeyPair ? KeyExport.Private : KeyExport.Secret;
     let keyId = this.getKeyIdentifier(this.keyType, this.keyUse, keyExport);
-    console.log(`Sign data: ${base64url(data)} with ${keyId}`);
+    //console.log(`Sign data: ${base64url(data)} with ${keyId}`);
     return this.getJwkKey(keyExport)
     .then((jwk) => {
       let keyObject = this.getKeyObject(keyId);
@@ -220,7 +221,7 @@ export default class DidKey {
    * @param signature  The signature on the data
    */
   public verify (data: Buffer, signature: ArrayBuffer): Promise<boolean> {
-    console.log(`Verify data: ${base64url(data)}`);
+    //console.log(`Verify data: ${base64url(data)}`);
     let keyExport = this.isKeyPair ? KeyExport.Public : KeyExport.Secret;
     return this.getJwkKey(keyExport)
     .then((jwk) => {
@@ -241,7 +242,7 @@ export default class DidKey {
       console.error(err);
       throw new Error(`DidKey:getJwkKey->Failed ${err}`);
     });
-}
+  }
 
   /**
    * Generate a pairwise key
@@ -448,7 +449,7 @@ export default class DidKey {
 
   // Get the key or generate the key if needed
   // Return a keyObject
-  private getOrGenerateKey (keyId: string, keyExport: KeyExport): Promise<KeyObject> {
+  private getOrGenerateKey (keyId: string): Promise<KeyObject> {
     if (this._rawKey === null) {
       // indicate key is generated and raw key was not set by caller
       this._rawKey = undefined;
@@ -457,7 +458,7 @@ export default class DidKey {
       switch (this.keyType) {
         case KeyType.EC:
         case KeyType.RSA:
-          return this.generateKeyPair(keyExport);
+          return this.generateKeyPair();
         case KeyType.Oct:
           return this.generateOctKey();
         default:
@@ -504,7 +505,7 @@ export default class DidKey {
   }
 
   // Generate a key pair and return a key object
-  private generateKeyPair (keyExport: KeyExport): Promise<KeyObject> {
+  private generateKeyPair (): Promise<KeyObject> {
     return this._crypto.subtle.generateKey(this._algorithm, this._exportable, this.setKeyUsage())
     .then((keyObject: any) => {
       return new KeyObject(this.keyType, keyObject);

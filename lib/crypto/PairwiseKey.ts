@@ -24,6 +24,11 @@ export default class PairwiseKey {
   private _peerId: string;
 
   /**
+   * Get the number of prime tests
+   */
+  private _numberOfPrimeTests: number;
+
+  /**
    * Get the pairwise key
    */
   private _key: DidKey | undefined;
@@ -47,6 +52,13 @@ export default class PairwiseKey {
   }
 
   /**
+   * Get the number of tests needed for prime generatio 
+   */
+  public get primeTests (): number {
+    return this._numberOfPrimeTests;
+  }
+
+  /**
    * Create an instance of PairwiseKey.
    * @param did The DID.
    * @param peerId The peer id.
@@ -55,6 +67,7 @@ export default class PairwiseKey {
     this._id = `${did}-${peerId}`;
     this._peerId = peerId;
     this._key = undefined;
+    this._numberOfPrimeTests = 0;
   }
 
   /**
@@ -175,17 +188,16 @@ export default class PairwiseKey {
     primeSeed[0] |= 0x80;
     let two = bigInt(2);
     let prime = bigInt.fromArray(primeSeed, 256, false);
-    let count = 1;
+    this._numberOfPrimeTests = 1;
     while (true) {
       // 64 tests give 128 bit security
       if (prime.isProbablePrime(64)) {
         break;
       }
       prime = prime.add(two);
-      count++;
+      this._numberOfPrimeTests++;
     }
 
-    console.log(`Number of loops for prime search: ${count}`);
     return prime;
   }
 
