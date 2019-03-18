@@ -10,18 +10,18 @@ import IDidResolveResult from './IDidResolveResult';
 import HttpResolver, { HttpResolverOptions } from './resolvers/HttpResolver';
 import TestResolver from './mocks/TestResolver';
 
-export { 
-  DidKey, 
-  KeyUse, 
-  KeyExport, 
-  KeyType, 
-  IDidDocument, 
-  IDidDocumentPublicKey, 
-  IDidDocumentServiceDescriptor, 
-  IDidResolver, 
-  IDidResolveResult, 
-  HttpResolver, 
-  HttpResolverOptions 
+export {
+  DidKey,
+  KeyUse,
+  KeyExport,
+  KeyType,
+  IDidDocument,
+  IDidDocumentPublicKey,
+  IDidDocumentServiceDescriptor,
+  IDidResolver,
+  IDidResolveResult,
+  HttpResolver,
+  HttpResolverOptions
 };
 
 export const unitTestExports = {
