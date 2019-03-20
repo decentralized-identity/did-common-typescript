@@ -1,6 +1,4 @@
 import DidKey from '../../lib/crypto/DidKey';
-import { KeyType } from '../../lib/crypto/KeyType';
-import { KeyUse } from '../../lib/crypto/KeyUse';
 import { KeyExport } from '../../lib/crypto/KeyExport';
 import WebCrypto from 'node-webcrypto-ossl';
 const pairwiseKeys = require('./Pairwise.RSA.json');
@@ -20,7 +18,7 @@ describe('DidKey Pairwise keys RSA', () => {
       for (inx = 0; inx < nrIds; inx++) {
         let did: string = 'abcdef';
         let alg = { name: 'RSASSA-PKCS1-v1_5', modulusLength: 1024, publicExponent: new Uint8Array([0x01, 0x00, 0x01]), hash: { name: 'SHA-256' } };
-        let didKey: DidKey = new DidKey(crypto, alg, KeyType.RSA, KeyUse.Signature, null);
+        let didKey: DidKey = new DidKey(crypto, alg, null);
         let id = `${inx}`;
         let pairwiseKey: DidKey = await didKey.generatePairwise(seed, did, id);
         let jwk = await pairwiseKey.getJwkKey(KeyExport.Private);

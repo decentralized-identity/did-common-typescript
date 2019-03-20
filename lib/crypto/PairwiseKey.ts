@@ -124,7 +124,7 @@ export default class PairwiseKey {
    */
   private async generateHashForPrime (crypto: any, _inx: number, key: Buffer, data: Buffer): Promise<Buffer> {
     const alg = { name: 'hmac', hash: { name: 'SHA-512' } };
-    let deterministicNumber = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, key, true);
+    let deterministicNumber = new DidKey(crypto, alg, key, true);
     await deterministicNumber.getJwkKey(KeyExport.Secret);
     let signature = await deterministicNumber.sign(data);
     this._deterministicKey = Buffer.concat([this._deterministicKey, Buffer.from(signature)]);
@@ -228,7 +228,7 @@ export default class PairwiseKey {
       qi: this.toBase(qi)
     };
 
-    return new DidKey(crypto, algorithm, keyType, keyUse, jwk);
+    return new DidKey(crypto, algorithm, jwk);
   }
 
   /**
@@ -268,7 +268,7 @@ export default class PairwiseKey {
     exportable: boolean = true): Promise<DidKey> {
       // Generate peer key
     const alg = { name: 'hmac', hash: { name: 'SHA-256' } };
-    let hashDidKey = new DidKey(crypto, alg, KeyType.Oct, KeyUse.Signature, didMasterKey, true);
+    let hashDidKey = new DidKey(crypto, alg, didMasterKey, true);
     let signature: any = await hashDidKey.sign(Buffer.from(this._peerId));
     let ec = undefined;
     let curve: string;
@@ -301,7 +301,7 @@ export default class PairwiseKey {
       kty: 'EC'
     };
 
-    this._key = new DidKey(crypto, algorithm, keyType, keyUse, jwk, exportable);
+    this._key = new DidKey(crypto, algorithm, jwk, exportable);
     return this._key;
   }
 

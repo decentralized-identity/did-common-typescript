@@ -59,7 +59,7 @@ describe('PairwiseKey', () => {
       let signature: ArrayBuffer = await didKey.sign(Buffer.from(data));
             // Make sure there is only the public key
       jwk.d = undefined;
-      didKey = new DidKey(crypto, alg, KeyType.EC, KeyUse.Signature, jwk, true);
+      didKey = new DidKey(crypto, alg, jwk, true);
       let correct: boolean = await didKey.verify(Buffer.from(data), signature);
       expect(true).toBe(correct);
       done();

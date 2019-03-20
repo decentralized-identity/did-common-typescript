@@ -1,5 +1,5 @@
-import { KeyType } from './KeyType';
-import { KeyUse } from './KeyUse';
+import KeyTypeFactory, { KeyType } from './KeyType';
+import KeyUseFactory, { KeyUse } from './KeyUse';
 import KeyObject from './KeyObject';
 import PairwiseKey from './PairwiseKey';
 import MasterKey from './MasterKey';
@@ -45,49 +45,25 @@ export default class DidKey {
    * Create an instance of DidKey.
    * @param crypto The crypto object.
    * @param algorithm Intended algorithm to use for the key.
-   * @param keyType Key type.
-   * @param keyUse Key usage.
    * @param key The key.
    * @param exportable True if the key is exportable.
    */
   public constructor (
     crypto: any,
     algorithm: any,
-    keyType: KeyType,
-    keyUse: KeyUse,
     key: any = undefined,
     exportable: boolean = true
   ) {
     this._crypto = crypto;
-    this._keyType = keyType;
-    this._keyUse = keyUse;
-    this._exportable = exportable;
 
     // Check algorithm
     if (!algorithm.name) {
       throw new Error('Missing property name in algorithm');
     }
 
-    switch (keyType) {
-      case KeyType.EC:
-        if (algorithm.name !== 'ECDSA' && algorithm.name !== 'ECDH') {
-          throw new Error('For KeyType EC, property name in algorithm must be ECDSA or ECDH');
-        }
-        break;
-
-      case KeyType.RSA:
-        if (keyUse === KeyUse.Encryption) {
-          if (algorithm.name !== 'RSA-OAEP') {
-            throw new Error('For KeyType RSA encryption, property name in algorithm must be RSA-OAEP');
-          }
-        } else {
-          if (algorithm.name !== 'RSASSA-PKCS1-v1_5') {
-            throw new Error('For KeyType RSA signatures, property name in algorithm must be RSASSA-PKCS1-v1_5');
-          }
-        }
-        break;
-    }
-
+    this._keyUse = KeyUseFactory.create(algorithm);
+    this._keyType = KeyTypeFactory.create(algorithm);
+    this._exportable = exportable;
     this._algorithm = this.normalizeAlgorithm(algorithm);
 
     // Set the raw key. Can be null if the key needs to be generated
@@ -278,7 +254,7 @@ export default class DidKey {
     }
 
     let alg = { name: 'hmac', hash: 'SHA-512' };
-    let signKey: DidKey = new DidKey(this._crypto, alg, KeyType.Oct, KeyUse.Signature, seed);
+    let signKey: DidKey = new DidKey(this._crypto, alg, seed);
     await signKey.getJwkKey(KeyExport.Secret);
     let signature: ArrayBuffer = await signKey.sign(Buffer.from(did));
     mk = new MasterKey(did, Buffer.from(signature));
