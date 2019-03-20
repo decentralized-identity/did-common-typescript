@@ -47,12 +47,7 @@ export default class HttpResolver implements IDidResolver {
 
     // tslint:disable-next-line
     if (typeof self === 'object' && 'fetch' in self) {
-      return self.fetch;
-    }
-
-    // tslint:disable-next-line
-    if (typeof global === 'object' && 'fetch' in global) {
-      return (global as any).fetch;
+      return self.fetch.bind(self);
     }
 
     throw new Error('Please pass an implementation of fetch() to the HttpResolver.');
