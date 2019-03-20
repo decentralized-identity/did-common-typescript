@@ -64,7 +64,7 @@ describe('DidKey', () => {
         let didKey = new DidKey(webCryptoClass, { name: 'xxx' }, null);
         expect(didKey).toBeUndefined();
         fail('should throw exception');
-      } catch(err) {
+      } catch (err) {
         expect(`The algorithm 'xxx' is not supported`).toBe(err.message);
       }
 
