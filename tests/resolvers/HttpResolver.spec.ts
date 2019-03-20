@@ -14,27 +14,25 @@ describe('HttpResolver', () => {
   describe('constructor', () => {
 
     it('should return use the default implementation when given a the correct DID from a correctly formatted key ID.', () => {
-      (global as any).fetch = 'testing';
+      (global as any).self = {
+        fetch: () => 'testing'
+      };
 
       const resolver = new HttpResolver(exampleUrl);
       expect(resolver['resolverUrl']).toEqual(exampleUrl);
-      expect(resolver['fetchImplementation']).toEqual('testing');
+      expect(resolver['fetchImplementation']).toBeDefined();
+      expect(resolver['fetchImplementation']('https://example.com')).toEqual('testing' as any);
 
-      delete (global as any).fetch;
+      delete (global as any).self;
     });
 
     it('should throw an error if no default implementation exists', () => {
-      const oldFetch = (global as any).fetch;
-      delete (global as any).fetch;
-
       try {
         const resolver = new HttpResolver(exampleUrl);
         fail('Not expected to get here: ' + resolver);
       } catch (e) {
         expect(e.message).toContain('pass an implementation');
       }
-
-      if (oldFetch) (global as any).fetch = oldFetch;
     });
 
   });
