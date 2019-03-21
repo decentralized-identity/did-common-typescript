@@ -22,96 +22,101 @@ describe('DidKey', () => {
   describe('Test constructor oct key', () => {
     it('Should set the right properties including symmetric key.', (done) => {
       let sampleKey = '1234567890123456';
-      crytoObjects.forEach((cryptoObj) => {
+      crytoObjects.forEach(async (cryptoObj) => {
         console.log(`Crypto object: ${cryptoObj.name}`);
         const alg = { name: 'hmac', hash: 'SHA-256' };
-        let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.Oct, KeyUse.Signature, Buffer.from(sampleKey), true);
+        let didKey = new DidKey(cryptoObj.crypto, alg, Buffer.from(sampleKey), true);
         expect(KeyType.Oct).toEqual(didKey.keyType);
         expect(KeyUse.Signature).toEqual(didKey.keyUse);
         expect(alg).toEqual(didKey.algorithm);
         expect(true).toEqual(didKey.exportable);
 
-        didKey.getJwkKey(KeyExport.Secret).then((key: any) => {
-          expect(key).not.toBeNull();
-          expect(key.kty).toBe('oct');
-          expect(base64url.encode(Buffer.from(sampleKey))).toBe(key.k);
-          done();
-        })
-        .catch((err) => {
-          fail(`Error occured: '${err}'`);
-        });
+        let key: any = await didKey.getJwkKey(KeyExport.Secret);
+        expect(key).not.toBeNull();
+        expect(key.kty).toBe('oct');
+        expect(base64url.encode(Buffer.from(sampleKey))).toBe(key.k);
       });
+      done();
     });
 
     it('generate symmetric key.', (done) => {
-      crytoObjects.forEach((cryptoObj) => {
+      crytoObjects.forEach(async (cryptoObj) => {
         console.log(`Crypto object: ${cryptoObj.name}`);
         const alg = { name: 'hmac', hash: 'SHA-256' };
-        let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.Oct, KeyUse.Signature, null, true);
+        let didKey = new DidKey(cryptoObj.crypto, alg, null, true);
         expect(KeyType.Oct).toEqual(didKey.keyType);
         expect(KeyUse.Signature).toEqual(didKey.keyUse);
         expect(alg).toEqual(didKey.algorithm);
         expect(true).toEqual(didKey.exportable);
 
-        didKey.getJwkKey(KeyExport.Secret).then((key) => {
-          expect(key).not.toBeNull();
-          expect(key.kty).toBe('oct');
-          expect(key.k).not.toBeNull();
-          expect(key.k).not.toBeUndefined();
-          done();
-        })
-        .catch((err) => {
-          fail(`Error occured: '${err}'`);
-        });
+        let key = await didKey.getJwkKey(KeyExport.Secret);
+        expect(key).not.toBeNull();
+        expect(key.kty).toBe('oct');
+        expect(key.k).not.toBeNull();
+        expect(key.k).not.toBeUndefined();
       });
+      done();
     });
 
-    it('Check throws.', (done) => {
-      let didKey = new DidKey(webCryptoClass, { name: 'xxx' }, KeyType.Oct, KeyUse.Encryption, null, true);
-      didKey.getJwkKey(KeyExport.Secret).then(() => {
-        fail('should throw exception');
-      })
-      .catch((err) => {
-        expect(err).toBeDefined();
-      });
+    it('Check throws.', async (done) => {
 
       try {
-        didKey = new DidKey(webCryptoClass, { }, KeyType.EC, KeyUse.Encryption, null, true);
-        didKey.getJwkKey(KeyExport.Secret).then(() => {
-          fail('should throw exception');
-        })
-        .catch((err) => {
-          fail(`Error occured: '${err}'`);
-        });
+        let didKey = new DidKey(webCryptoClass, { name: 'xxx' }, null);
+        expect(didKey).toBeUndefined();
+        fail('should throw exception');
+      } catch (err) {
+        expect(`The algorithm 'xxx' is not supported`).toBe(err.message);
+      }
+
+      try {
+        let didKey = new DidKey(webCryptoClass, { }, null, true);
+        await didKey.getJwkKey(KeyExport.Secret);
+        fail('should throw exception');
       } catch (err) {
         expect('Missing property name in algorithm').toBe(err.message);
       }
 
       try {
-        didKey = new DidKey(webCryptoClass, { name: 'xxx' }, KeyType.EC, KeyUse.Encryption, null, true);
-        didKey.getJwkKey(KeyExport.Secret).then(() => {
-          fail('should throw exception');
-        })
-        .catch((err) => {
-          fail(`Error occured: '${err}'`);
-        })
-        .catch((err) => {
-          fail(`Error occured: '${err}'`);
-        });
+        const alg = { name: 'hmac', hash: 'SHA-256' };
+        let didKey = new DidKey(webCryptoClass, alg, undefined, true);
+        await didKey.getJwkKey(KeyExport.Secret);
+        fail('should throw exception');
       } catch (err) {
-        expect('For KeyType EC, property name in algorithm must be ECDSA or ECDH').toBe(err.message);
+        expect('Key must be defined').toBe(err.message);
       }
 
       try {
-        didKey = new DidKey(webCryptoClass, { name: 'xxx' }, KeyType.RSA, KeyUse.Encryption, null, true);
-        didKey.getJwkKey(KeyExport.Secret).then(() => {
-          fail('should throw exception');
-        })
-        .catch((err) => {
-          fail(`Error occured: '${err}'`);
-        });
+        const alg = { name: 'hmac', hash: 'SHA-256' };
+        let didKey = new DidKey(webCryptoClass, alg, null, true);
+        let did: any = didKey as any;
+        did._keyType = 10;
+
+        await didKey.getJwkKey(KeyExport.Secret);
+        fail('should throw exception');
       } catch (err) {
-        expect('For KeyType RSA encryption, property name in algorithm must be RSA-OAEP').toBe(err.message);
+        expect(`Key type '10' not supported`).toBe(err.message);
+      }
+
+      // test getJwkKeyFromKeyObject exceptions
+      let alg = { name: 'hmac', hash: 'SHA-256' };
+      let didKey = new DidKey(webCryptoClass, alg, null, true);
+      let did: any = didKey as any;
+      did.getJwkKeyFromKeyObject(KeyExport.Secret, null).catch((err: any) => {
+        expect(`keyObject argument in getJwkKey cannot be null`).toBe(err.message);
+      });
+
+      did._keyType = 10;
+      did.getJwkKeyFromKeyObject(KeyExport.Secret, 1).catch((err: any) => {
+        expect(`DidKey:getJwkKey->10 is not supported`).toBe(err.message);
+      });
+
+      try {
+        didKey = new DidKey(webCryptoClass, alg, null, true);
+        let did: any = didKey as any;
+        did._keyUse = 10;
+        did.setKeyUsage();
+      } catch (err) {
+        expect(`The value for KeyUse '10' is invalid. Needs to be sig or enc`).toBe(err.message);
       }
 
       done();
@@ -120,188 +125,118 @@ describe('DidKey', () => {
   });
 
   describe('Test signing with oct key', () => {
-    it('HMAC-SHA256.', (done) => {
+    it('HMAC-SHA256.', async (done) => {
       let sampleKey = '1234567890';
-      crytoObjects.forEach((cryptoObj) => {
+      crytoObjects.forEach(async (cryptoObj) => {
         console.log(`Crypto object: ${cryptoObj.name}`);
         const alg = { name: 'hmac', hash: { name: 'SHA-256' } };
-        let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.Oct, KeyUse.Signature, Buffer.from(sampleKey), true);
+        let didKey = new DidKey(cryptoObj.crypto, alg, Buffer.from(sampleKey), true);
 
         const data = 'abcdefghij';
 
         // Make sure the key is set (promise is completed)
-        didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
-          didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
-            expect(true).toBe(correct);
-            done();
-          })
-            .catch((err) => {
-              fail(`Error occured: '${err}'`);
-            });
-        })
-          .catch((err) => {
-            fail(`Error occured: '${err}'`);
-          });
+        let signature: ArrayBuffer = await didKey.sign(Buffer.from(data));
+        let correct: boolean = await didKey.verify(Buffer.from(data), signature);
+        expect(true).toBe(correct);
       });
+      done();
     });
 
-    it('HMAC-SHA512.', (done) => {
+    it('HMAC-SHA512.', async (done) => {
       let sampleKey = '1234567890';
-      crytoObjects.forEach((cryptoObj) => {
+      crytoObjects.forEach(async (cryptoObj) => {
         console.log(`Crypto object: ${cryptoObj.name}`);
         const alg = { name: 'hmac', hash: { name: 'SHA-512' } };
-        let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.Oct, KeyUse.Signature, Buffer.from(sampleKey), true);
+        let didKey = new DidKey(cryptoObj.crypto, alg, Buffer.from(sampleKey), true);
 
         const data = 'abcdefghij';
-        didKey.getJwkKey(KeyExport.Secret).then(() => {
-          didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
-            didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
-              expect(true).toBe(correct);
-              done();
-            })
-            .catch((err) => {
-              fail(`Error occured: '${err}'`);
-            });
-          })
-          .catch((err) => {
-            fail(`Error occured: '${err}'`);
-          });
-        })
-        .catch((err) => {
-          fail(`Error occured: '${err}'`);
-        });
+        await didKey.getJwkKey(KeyExport.Secret);
+        let signature: ArrayBuffer = await didKey.sign(Buffer.from(data));
+        let correct: boolean = await didKey.verify(Buffer.from(data), signature);
+        expect(true).toBe(correct);
       });
+      done();
     });
   });
 
   describe('ECDSA', () => {
-    it('secp256k1 sign and verify.', (done) => {
-      crytoObjects.forEach((cryptoObj) => {
+    it('secp256k1 sign and verify.', async (done) => {
+      crytoObjects.forEach(async (cryptoObj) => {
         console.log(`Crypto object: ${cryptoObj.name}`);
         const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
-        let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, null, true);
+        let didKey = new DidKey(cryptoObj.crypto, alg, null, true);
 
         const data = 'abcdefghij';
-        didKey.sign(Buffer.from(data))
-        .then((signature: ArrayBuffer) => {
-          didKey.verify(Buffer.from(data), signature)
-          .then((correct: boolean) => {
-            expect(true).toBe(correct);
-            done();
-          })
-            .catch((err) => {
-              fail(`Error occured: '${err}'`);
-            });
-        })
-          .catch((err) => {
-            fail(`Error occured: '${err}'`);
-          });
+        let signature: ArrayBuffer = await didKey.sign(Buffer.from(data));
+        let correct: boolean = await didKey.verify(Buffer.from(data), signature);
+        expect(true).toBe(correct);
       });
+      done();
     });
 
     describe('ECDSA', () => {
-      it('secp256k1 sign and verify with imported key.', (done) => {
-        crytoObjects.forEach((cryptoObj) => {
+      it('secp256k1 sign and verify with imported key.', async (done) => {
+        crytoObjects.forEach(async (cryptoObj) => {
           console.log(`Crypto object: ${cryptoObj.name}`);
           const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
-          let generatedDidKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, null, true);
-          generatedDidKey.getJwkKey(KeyExport.Private).then((jwk) => {
-            let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, jwk, true);
+          let generatedDidKey = new DidKey(cryptoObj.crypto, alg, null, true);
+          let jwk = await generatedDidKey.getJwkKey(KeyExport.Private);
+          let didKey = new DidKey(cryptoObj.crypto, alg, jwk, true);
 
-            const data = 'abcdefghij';
-            didKey.getJwkKey(KeyExport.Private).then((jwk) => {
-              expect(KeyType.EC).toBe(jwk.kty);
-              didKey.sign(Buffer.from(data)).then((signature: ArrayBuffer) => {
+          const data = 'abcdefghij';
+          jwk = await didKey.getJwkKey(KeyExport.Private);
+          expect(KeyType.EC).toBe(jwk.kty);
+          let signature: ArrayBuffer = await didKey.sign(Buffer.from(data));
                 // Make sure there is only the public key
-                jwk.d = undefined;
-                didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, jwk, true);
-                didKey.getJwkKey(KeyExport.Public).then(() => {
-                  didKey.verify(Buffer.from(data), signature).then((correct: boolean) => {
-                    expect(true).toBe(correct);
-                    done();
-                  })
-                  .catch((err) => {
-                    fail(`Error occured: '${err}'`);
-                  });
-                })
-                .catch((err) => {
-                  fail(`Error occured: '${err}'`);
-                });
-              })
-              .catch((err) => {
-                fail(`Error occured: '${err}'`);
-              });
-            })
-            .catch((err) => {
-              fail(`Error occured: '${err}'`);
-            });
-          })
-          .catch((err) => {
-            fail(`Error occured: '${err}'`);
-          });
+          jwk.d = undefined;
+          didKey = new DidKey(cryptoObj.crypto, alg, jwk, true);
+          await didKey.getJwkKey(KeyExport.Public);
+          let correct: boolean = await didKey.verify(Buffer.from(data), signature);
+          expect(true).toBe(correct);
         });
+        done();
       });
-    });
 
-    it('secp256k1 import.', (done) => {
-      crytoObjects.forEach((cryptoObj) => {
-        console.log(`Crypto object: ${cryptoObj.name}`);
-        const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
+      it('secp256k1 import.', async (done) => {
+        crytoObjects.forEach(async (cryptoObj) => {
+          console.log(`Crypto object: ${cryptoObj.name}`);
+          const alg = { name: 'ECDSA', namedCurve: 'P-256K', hash: { name: 'SHA-256' } };
 
-        // Generate the key pair
-        let didKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Signature, null, true);
+          // Generate the key pair
+          let didKey = new DidKey(cryptoObj.crypto, alg, null, true);
 
-        didKey.getJwkKey(KeyExport.Private).then((ecKey1) => {
+          let ecKey1 = await didKey.getJwkKey(KeyExport.Private);
           expect(ecKey1).not.toBeNull();
           expect('K-256').toBe(ecKey1.crv);
           expect('EC').toBe(ecKey1.kty);
-          done();
-        })
-        .catch((err) => {
-          fail(`Error occured: '${err}'`);
         });
+        done();
       });
+
     });
 
-    it('secp256k1 encrypt and decrypt.', (done) => {
-      crytoObjects.forEach((cryptoObj) => {
-        console.log(`Crypto object: ${cryptoObj.name}`);
+    describe('ECDH', () => {
 
-        console.log('Generate my key');
-        let alg: any = { name: 'ECDH', namedCurve: 'P-256K' };
-        let myDidKey = new DidKey(cryptoObj.crypto, alg, KeyType.EC, KeyUse.Encryption, null, true);
+      it('secp256k1 encrypt and decrypt.', async (done) => {
+        crytoObjects.forEach(async (cryptoObj) => {
+          console.log(`Crypto object: ${cryptoObj.name}`);
 
-        myDidKey.getJwkKey(KeyExport.Private).then((myJwkEcKey) => {
-          cryptoObj.crypto.subtle
-            .importKey('jwk', myJwkEcKey, alg, true, [ 'deriveKey', 'deriveBits' ])
-            .then((ecKey: any) => {
-              let privateEcKey = new KeyObject(KeyType.EC, ecKey);
-              myJwkEcKey.d = undefined;
-              cryptoObj.crypto.subtle
-                .importKey('jwk', myJwkEcKey, alg, true, [ 'deriveKey', 'deriveBits' ])
-                .then((ecKey: any) => {
-                  alg.public = ecKey;
-                  cryptoObj.crypto.subtle.deriveBits(alg, privateEcKey.privateKey, 128).then((bits: any) => {
-                    expect(16).toBe(bits.byteLength);
-                    done();
-                  })
-                  .catch((err: any) => {
-                    fail(`Error occured: '${err}'`);
-                  });
-                })
-                .catch((err: any) => {
-                  fail(`Error occured: '${err}'`);
-                });
-            })
-            .catch((err: any) => {
-              fail(`Error occured: '${err}'`);
-            });
-        })
-        .catch((err: any) => {
-          fail(`Error occured: '${err}'`);
+          console.log('Generate my key');
+          let alg: any = { name: 'ECDH', namedCurve: 'P-256K' };
+          let myDidKey = new DidKey(cryptoObj.crypto, alg, null, true);
+
+          let myJwkEcKey = await myDidKey.getJwkKey(KeyExport.Private);
+          let ecKey: any = await cryptoObj.crypto.subtle.importKey('jwk', myJwkEcKey, alg, true, [ 'deriveKey', 'deriveBits' ]);
+          let privateEcKey = new KeyObject(KeyType.EC, ecKey);
+          myJwkEcKey.d = undefined;
+          ecKey = await cryptoObj.crypto.subtle.importKey('jwk', myJwkEcKey, alg, true, [ 'deriveKey', 'deriveBits' ]);
+          alg.public = ecKey;
+          let bits: any = await cryptoObj.crypto.subtle.deriveBits(alg, privateEcKey.privateKey, 128);
+          expect(16).toBe(bits.byteLength);
         });
+        done();
       });
-    });
 
+    });
   });
 });

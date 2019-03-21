@@ -16,61 +16,52 @@ describe('Constructor', () => {
       }
     });
 
-    it('Should set the right properties for the symmetric key.', (done) => {
+    it('Should set the right properties for the symmetric key.', async (done) => {
       const alg = { name: 'hmac', hash: 'SHA-256' };
-      crypto.subtle.generateKey(alg, true, [ 'sign' ]).then((key) => {
-        let keyObject: KeyObject = new KeyObject(KeyType.Oct, key);
-        expect(KeyType.Oct).toBe(keyObject.keyType);
-        expect(false).toBe(keyObject.isKeyPair);
-        expect(false).toBe(keyObject.isPrivateKey);
-        expect(false).toBe(keyObject.isPublicKeyCrypto);
-        done();
-      });
+      let key = await (crypto.subtle.generateKey(alg, true, [ 'sign' ]) as Promise<any>);
+      let keyObject: KeyObject = new KeyObject(KeyType.Oct, key);
+      expect(KeyType.Oct).toBe(keyObject.keyType);
+      expect(false).toBe(keyObject.isKeyPair);
+      expect(false).toBe(keyObject.isPrivateKey);
+      expect(false).toBe(keyObject.isPublicKeyCrypto);
+      done();
     });
 
-    it('Should set the right properties for the EC key.', (done) => {
+    it('Should set the right properties for the EC key.', async (done) => {
       let alg: any = { name: 'ECDH', namedCurve: 'K-256' };
-      crypto.subtle.generateKey(alg, true, [ 'deriveBits' ]).then((key) => {
-        let keyObject: KeyObject = new KeyObject(KeyType.EC, key);
-        expect(KeyType.EC).toBe(keyObject.keyType);
-        expect(true).toBe(keyObject.isKeyPair);
-        expect(true).toBe(keyObject.isPrivateKey);
-        expect(true).toBe(keyObject.isPublicKeyCrypto);
-        done();
-      });
+      let key = await (crypto.subtle.generateKey(alg, true, [ 'deriveBits' ]) as Promise<any>);
+      let keyObject: KeyObject = new KeyObject(KeyType.EC, key);
+      expect(KeyType.EC).toBe(keyObject.keyType);
+      expect(true).toBe(keyObject.isKeyPair);
+      expect(true).toBe(keyObject.isPrivateKey);
+      expect(true).toBe(keyObject.isPublicKeyCrypto);
+      done();
     });
 
-    it('Should set the right properties for the imported private key.', (done) => {
+    it('Should set the right properties for the imported private key.', async (done) => {
       let alg: any = { name: 'ECDH', namedCurve: 'K-256' };
-      crypto.subtle.generateKey(alg, true, [ 'deriveBits' ]).then((key: any) => {
-        crypto.subtle.exportKey('jwk', key.privateKey).then((jwkKey: any) => {
-          crypto.subtle.importKey('jwk', jwkKey, alg, true, [ 'deriveBits' ]).then((key: any) => {
-            let keyObject: KeyObject = new KeyObject(KeyType.EC, key);
-            expect(KeyType.EC).toBe(keyObject.keyType);
-            expect(false).toBe(keyObject.isKeyPair);
-            expect(true).toBe(keyObject.isPrivateKey);
-            expect(true).toBe(keyObject.isPublicKeyCrypto);
-            done();
-          });
-        });
-      });
+      let key: any = await (crypto.subtle.generateKey(alg, true, [ 'deriveBits' ]) as Promise<any>);
+      let jwkKey: any = await (crypto.subtle.exportKey('jwk', key.privateKey) as Promise<any>);
+      key = await (crypto.subtle.importKey('jwk', jwkKey, alg, true, [ 'deriveBits' ]) as Promise<any>);
+      let keyObject: KeyObject = new KeyObject(KeyType.EC, key);
+      expect(KeyType.EC).toBe(keyObject.keyType);
+      expect(false).toBe(keyObject.isKeyPair);
+      expect(true).toBe(keyObject.isPrivateKey);
+      expect(true).toBe(keyObject.isPublicKeyCrypto);
+      done();
     });
 
-    it('Should set the right properties for the imported public key.', (done) => {
+    it('Should set the right properties for the imported public key.', async (done) => {
       let alg: any = { name: 'ECDH', namedCurve: 'K-256' };
-      crypto.subtle.generateKey(alg, true, [ 'deriveBits' ]).then((key: any) => {
-        crypto.subtle.exportKey('jwk', key.publicKey).then((jwkKey: any) => {
-          crypto.subtle.importKey('jwk', jwkKey, alg, true, [ 'deriveBits' ]).then((key: any) => {
-            let keyObject: KeyObject = new KeyObject(KeyType.EC, key);
-            expect(KeyType.EC).toBe(keyObject.keyType);
-            expect(false).toBe(keyObject.isKeyPair);
-            expect(false).toBe(keyObject.isPrivateKey);
-            expect(true).toBe(keyObject.isPublicKeyCrypto);
-            done();
-          });
-        });
-      });
+      let key: any = await (crypto.subtle.generateKey(alg, true, [ 'deriveBits' ]) as Promise<any>);
+      let jwkKey: any = await (crypto.subtle.exportKey('jwk', key.publicKey) as Promise<any>);
+      key = await (crypto.subtle.importKey('jwk', jwkKey, alg, true, [ 'deriveBits' ]) as Promise<any>);
+      let keyObject: KeyObject = new KeyObject(KeyType.EC, key);
+      expect(KeyType.EC).toBe(keyObject.keyType);
+      expect(false).toBe(keyObject.isKeyPair);
+      expect(false).toBe(keyObject.isPrivateKey);
+      expect(true).toBe(keyObject.isPublicKeyCrypto);
+      done();
     });
-
   });
 });
