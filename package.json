@@ -57,6 +57,7 @@
   "dependencies": {
     "base64url": "^3.0.1",
     "big-integer": "github:peterolson/BigInteger.js",
+    "clone": "^2.1.2",
     "elliptic": "^6.4.1",
     "install": "^0.12.2",
     "node-webcrypto-ossl": "^1.0.39",

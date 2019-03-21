@@ -217,7 +217,7 @@ describe('DidKey', () => {
 
     describe('ECDH', () => {
 
-      it('secp256k1 encrypt and decrypt.', async (done) => {
+      fit('secp256k1 encrypt and decrypt.', async (done) => {
         crytoObjects.forEach(async (cryptoObj) => {
           console.log(`Crypto object: ${cryptoObj.name}`);
 
@@ -226,12 +226,14 @@ describe('DidKey', () => {
           let myDidKey = new DidKey(cryptoObj.crypto, alg, null, true);
 
           let myJwkEcKey = await myDidKey.getJwkKey(KeyExport.Private);
-          let ecKey: any = await cryptoObj.crypto.subtle.importKey('jwk', myJwkEcKey, alg, true, [ 'deriveKey', 'deriveBits' ]);
+          let ecKey: any = await cryptoObj.crypto.subtle
+            .importKey('jwk', DidKey.normalizeJwk(myJwkEcKey), DidKey.normalizeAlgorithm(alg), true, [ 'deriveKey', 'deriveBits' ]);
           let privateEcKey = new KeyObject(KeyType.EC, ecKey);
           myJwkEcKey.d = undefined;
-          ecKey = await cryptoObj.crypto.subtle.importKey('jwk', myJwkEcKey, alg, true, [ 'deriveKey', 'deriveBits' ]);
+          ecKey = await cryptoObj.crypto.subtle
+            .importKey('jwk', DidKey.normalizeJwk(myJwkEcKey), DidKey.normalizeAlgorithm(alg), true, [ 'deriveKey', 'deriveBits' ]);
           alg.public = ecKey;
-          let bits: any = await cryptoObj.crypto.subtle.deriveBits(alg, privateEcKey.privateKey, 128);
+          let bits: any = await cryptoObj.crypto.subtle.deriveBits(DidKey.normalizeAlgorithm(alg), privateEcKey.privateKey, 128);
           expect(16).toBe(bits.byteLength);
         });
         done();

@@ -271,12 +271,11 @@ export default class PairwiseKey {
     let hashDidKey = new DidKey(crypto, alg, didMasterKey, true);
     let signature: any = await hashDidKey.sign(Buffer.from(this._peerId));
     let ec = undefined;
-    let curve: string;
+    let curve: string = algorithm.namedCurve;
     switch (algorithm.namedCurve) {
       case 'K-256':
       case 'P-256K':
         ec = new elliptic.ec('secp256k1');
-        curve = 'K-256';
         break;
 
       default:
