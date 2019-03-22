@@ -217,7 +217,7 @@ describe('DidKey', () => {
 
     describe('ECDH', () => {
 
-      fit('secp256k1 encrypt and decrypt.', async (done) => {
+      xit('secp256k1 encrypt and decrypt.', async (done) => {
         crytoObjects.forEach(async (cryptoObj) => {
           console.log(`Crypto object: ${cryptoObj.name}`);
 
