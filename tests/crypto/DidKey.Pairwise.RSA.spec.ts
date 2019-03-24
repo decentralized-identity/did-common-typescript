@@ -10,7 +10,7 @@ describe('DidKey - RSA pairwise keys', () => {
   let originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
 
   beforeEach(() => {
-    jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+    jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000;
   });
 
   afterEach(() => {
