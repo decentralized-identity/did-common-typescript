@@ -47,11 +47,11 @@ export default class DidDocument {
    * @param id fully qualified key id
    */
   public getPublicKey (id: string): DidPublicKey | undefined {
-    return (this.publicKey || []).find(item => item.id === id);
+    return (this.publicKey).find(item => item.id === id);
   }
 
   /**
-   * Returns all of the the service endpoints contained in this DID Document.
+   * Returns all of the service endpoints contained in this DID Document.
    */
   public getServices () {
     return this.rawDocument.service || [];

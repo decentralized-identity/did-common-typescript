@@ -25,7 +25,7 @@ describe('DidDocument', () => {
   });
 
   describe('constructor', () => {
-    it('should convert valid DIDs', () => {
+    it(`should convert valid decentralized identifiers`, () => {
       const id = 'did:example:123456789abcdefghi';
       const json: IDidDocument = {
         '@context': 'https://w3id.org/did/v1',
@@ -50,7 +50,7 @@ describe('DidDocument', () => {
       expect(throws).toThrowError();
     });
 
-    it('should thorw for missing @context', () => {
+    it('should throw for missing @context', () => {
       const id = 'did:example:123456789abcdefghi';
       const json = {
         id,
