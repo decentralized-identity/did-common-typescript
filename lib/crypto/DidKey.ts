@@ -1,17 +1,21 @@
-import KeyTypeFactory, { KeyType } from './KeyType';
-import KeyUseFactory, { KeyUse } from './KeyUse';
-import KeyObject from './KeyObject';
-import PairwiseKey from './PairwiseKey';
-import MasterKey from './MasterKey';
 import base64url from 'base64url';
 import { KeyExport } from './KeyExport';
+import KeyObject from './KeyObject';
+import { KeyOperation } from './KeyOperation';
+import KeyTypeFactory, { KeyType } from './KeyType';
+import KeyUseFactory, { KeyUse } from './KeyUse';
+import MasterKey from './MasterKey';
+import PairwiseKey from './PairwiseKey';
 const clone = require('clone');
+
+// Name curves
+const CURVE_P256K = 'P-256K';
+const CURVE_K256 = 'K-256';
 
 /**
  * Class to model a key
  */
 export default class DidKey {
-
   // key type
   private _keyType: KeyType;
 
@@ -30,10 +34,10 @@ export default class DidKey {
   // Used to store the key passed by the caller
   private _rawKey: any;
 
- // Store for jwk keys in different formats. This is the format returned by exportKey
+  // Store for jwk keys in different formats. This is the format returned by exportKey
   private _jwkKeys: Map<string, object> = new Map<string, object>();
 
- // Store key objects. This is the format returned by generateKey
+  // Store key objects. This is the format returned by generateKey
   private _keyObjects: Map<string, object> = new Map<string, object>();
 
   // Set of master keys
@@ -49,12 +53,7 @@ export default class DidKey {
    * @param key The key.
    * @param exportable True if the key is exportable.
    */
-  public constructor (
-    crypto: any,
-    algorithm: any,
-    key: any = undefined,
-    exportable: boolean = true
-  ) {
+  public constructor (crypto: any, algorithm: any, key: any = undefined, exportable: boolean = true) {
     this._crypto = crypto;
 
     // Check algorithm
@@ -104,19 +103,19 @@ export default class DidKey {
    */
   public async getJwkKey (keyExport: KeyExport): Promise<any> {
     // check if key is already cached
-    let keyId = this.getKeyIdentifier(this.keyType, this.keyUse, keyExport);
-    let jwkKey = this.getJwkKeyFromCache(keyId);
+    const keyId = this.getKeyIdentifier(this.keyType, this.keyUse, keyExport);
+    const jwkKey = this.getJwkKeyFromCache(keyId);
     if (jwkKey) {
       // Return the key if it already exists
       return jwkKey;
     }
 
     // Get the key or generate the key if needed
-    let keyObject: KeyObject = await this.getOrGenerateKey();
+    const keyObject: KeyObject = await this.getOrGenerateKey();
     // Cache the key object
     this.cacheKeyObject(keyId, keyObject);
     // export to jwk format
-    let jwk: any = await this.getJwkKeyFromKeyObject(keyExport, keyObject);
+    const jwk: any = await this.getJwkKeyFromKeyObject(keyExport, keyObject);
 
     // Save jwk format
     this.cacheJwkKey(keyId, jwk);
@@ -124,7 +123,7 @@ export default class DidKey {
     // Check to save public key
     if (this.isKeyPair && keyExport === KeyExport.Private) {
       // Save only public key
-      let jwkPublic: any = {};
+      const jwkPublic: any = {};
       jwkPublic.kty = jwk.kty;
       jwkPublic.use = jwk.use;
       jwkPublic.key_ops = jwk.key_ops;
@@ -138,11 +137,16 @@ export default class DidKey {
       }
 
       // Save public key
-      let keyIdPublick = this.getKeyIdentifier(this.keyType, this.keyUse, KeyExport.Public);
-      this.cacheJwkKey(keyIdPublick, jwkPublic);
-      let keyObject: any = await this._crypto.subtle
-        .importKey('jwk', DidKey.normalizeJwk(jwkPublic), DidKey.normalizeAlgorithm(this._algorithm), this._exportable, this.setKeyUsage());
-      this.cacheKeyObject(keyIdPublick, new KeyObject(this.keyType, keyObject));
+      const keyIdPublic = this.getKeyIdentifier(this.keyType, this.keyUse, KeyExport.Public);
+      this.cacheJwkKey(keyIdPublic, jwkPublic);
+      const keyObject: any = await this._crypto.subtle.importKey(
+        'jwk',
+        DidKey.normalizeJwk(jwkPublic),
+        DidKey.normalizeAlgorithm(this._algorithm),
+        this._exportable,
+        this.getKeyOperations(this.keyUse)
+      );
+      this.cacheKeyObject(keyIdPublic, new KeyObject(this.keyType, keyObject));
     }
     return jwk;
   }
@@ -152,16 +156,19 @@ export default class DidKey {
    * @param data  Data to be signed with the current key
    */
   public async sign (data: Buffer): Promise<ArrayBuffer> {
-    let keyExport = this.isKeyPair ? KeyExport.Private : KeyExport.Secret;
-    let keyId = this.getKeyIdentifier(this.keyType, this.keyUse, keyExport);
+    const keyExport = this.isKeyPair ? KeyExport.Private : KeyExport.Secret;
+    const keyId = this.getKeyIdentifier(this.keyType, this.keyUse, keyExport);
     // console.log(`Sign data: ${base64url(data)} with ${keyId}`);
     await this.getJwkKey(keyExport);
-    let keyObject = this.getKeyObject(keyId);
+    const keyObject = this.getKeyObject(keyId);
     if (keyObject) {
-      return this._crypto.subtle
-        .sign(DidKey.normalizeAlgorithm(this._algorithm), this.isKeyPair ? (keyObject as any).privateKey : (keyObject as any).secretKey, data);
+      return this._crypto.subtle.sign(
+        DidKey.normalizeAlgorithm(this._algorithm),
+        this.isKeyPair ? (keyObject as any).privateKey : (keyObject as any).secretKey,
+        data
+      );
     } else {
-      throw new Error(`No private key for signature: ${keyId}`);
+      throw new Error(`A private key with id of '${keyId}' required to validate the signature cannot be found.`);
     }
   }
 
@@ -172,11 +179,16 @@ export default class DidKey {
    */
   public async verify (data: Buffer, signature: ArrayBuffer): Promise<boolean> {
     // console.log(`Verify data: ${base64url(data)}`);
-    let keyExport = this.isKeyPair ? KeyExport.Public : KeyExport.Secret;
-    let jwk = await this.getJwkKey(keyExport);
+    const keyExport = this.isKeyPair ? KeyExport.Public : KeyExport.Secret;
+    const jwk = await this.getJwkKey(keyExport);
     jwk.key_ops = ['verify'];
-    let keyObject: any = await this._crypto.subtle
-      .importKey('jwk', DidKey.normalizeJwk(jwk), DidKey.normalizeAlgorithm(this._algorithm), this._exportable, this.setKeyUsage());
+    const keyObject: any = await this._crypto.subtle.importKey(
+      'jwk',
+      DidKey.normalizeJwk(jwk),
+      DidKey.normalizeAlgorithm(this._algorithm),
+      this._exportable,
+      this.getKeyOperations(this.keyUse)
+    );
     return this._crypto.subtle.verify(DidKey.normalizeAlgorithm(this._algorithm), keyObject, signature, data);
   }
 
@@ -188,8 +200,8 @@ export default class DidKey {
    */
   public async generatePairwise (seed: Buffer, did: string, peerId: string): Promise<DidKey> {
     let pairwiseDidKey: DidKey;
-    let didMasterKey: MasterKey = await this.generateDidMasterKey(seed, did);
-    let pairwise: DidKey | undefined = this._didPairwiseKeys.get(this.mapDidPairwiseKeys(did, peerId));
+    const didMasterKey: MasterKey = await this.generateDidMasterKey(seed, did);
+    const pairwise: DidKey | undefined = this._didPairwiseKeys.get(this.mapDidPairwiseKeys(did, peerId));
     if (pairwise) {
       return pairwise;
     }
@@ -197,10 +209,16 @@ export default class DidKey {
     switch (this._keyType) {
       case KeyType.EC:
       case KeyType.RSA:
-
         // Generate new pairwise key
         const pairwiseKey: PairwiseKey = new PairwiseKey(did, peerId);
-        pairwiseDidKey = await pairwiseKey.generate(didMasterKey.key, this._crypto, this._algorithm, this._keyType, this._keyUse, this._exportable);
+        pairwiseDidKey = await pairwiseKey.generate(
+          didMasterKey.key,
+          this._crypto,
+          this._algorithm,
+          this._keyType,
+          this._keyUse,
+          this._exportable
+        );
 
         // Cache pairwise key
         this._didPairwiseKeys.set(this.mapDidPairwiseKeys(did, peerId), pairwiseDidKey);
@@ -220,9 +238,9 @@ export default class DidKey {
    */
   public static normalizeAlgorithm (algorithm: any) {
     if (algorithm.namedCurve) {
-      if (algorithm.namedCurve === 'P-256K') {
-        let alg = clone(algorithm);
-        alg.namedCurve = 'K-256';
+      if (algorithm.namedCurve === CURVE_P256K) {
+        const alg = clone(algorithm);
+        alg.namedCurve = CURVE_K256;
         return alg;
       }
     }
@@ -236,9 +254,9 @@ export default class DidKey {
    */
   public static normalizeJwk (jwk: any) {
     if (jwk.crv) {
-      if (jwk.crv === 'P-256K') {
-        let key = clone(jwk);
-        key.crv = 'K-256';
+      if (jwk.crv === CURVE_P256K) {
+        const key = clone(jwk);
+        key.crv = CURVE_K256;
         return key;
       }
     }
@@ -246,15 +264,46 @@ export default class DidKey {
     return jwk;
   }
 
+  /**
+   * Returns the key object for the specified
+   * key identifier.
+   * @param keyId of the key object to return
+   */
+  public getKeyObject (keyId: string): object | undefined {
+    // TODO add decryption with a system key
+    return this._keyObjects.get(keyId);
+  }
+
+  /**
+   * Returns an array of key operations.
+   */
+  public getKeyOperations (keyUse: KeyUse): Array<KeyOperation> {
+    switch (keyUse) {
+      case KeyUse.Encryption:
+        if (this.isKeyPair) {
+          return [KeyOperation.DeriveKey, KeyOperation.DeriveBits];
+        }
+
+        return [KeyOperation.Encrypt, KeyOperation.Decrypt];
+
+      case KeyUse.Signature:
+        return [KeyOperation.Sign, KeyOperation.Verify];
+    }
+  }
+
+  /**
+   * Returns a boolean indicating whether the key
+   * type of the instance is either KeyType.EC or
+   * KeyType.RSA.
+   */
+  private get isKeyPair (): boolean {
+    return this._keyType === KeyType.EC || this._keyType === KeyType.RSA;
+  }
+
   // Generate a unique key id for storage of pairwise keys
   private mapDidPairwiseKeys (did: string, peerId: string): string {
     // TODO add key use if we want different keys for signing and encryption
     return `${this._keyType}_${did}_${peerId}`;
-  }
-
-  // True if the key is a key pair
-  private get isKeyPair (): boolean {
-    return this._keyType === KeyType.EC || this._keyType === KeyType.RSA;
   }
 
   /**
@@ -267,41 +316,26 @@ export default class DidKey {
     let mk: MasterKey | undefined = undefined;
 
     // Check if key was already generated
-    this._didMasterKeys.forEach((masterKey: MasterKey): any => {
-      if (masterKey.did === did) {
-        mk = masterKey;
-        return;
+    this._didMasterKeys.forEach(
+      (masterKey: MasterKey): any => {
+        if (masterKey.did === did) {
+          mk = masterKey;
+          return;
+        }
       }
-    });
+    );
 
     if (mk) {
       return mk;
     }
 
-    let alg = { name: 'hmac', hash: 'SHA-512' };
-    let signKey: DidKey = new DidKey(this._crypto, alg, seed);
+    const alg = { name: 'hmac', hash: 'SHA-512' };
+    const signKey: DidKey = new DidKey(this._crypto, alg, seed);
     await signKey.getJwkKey(KeyExport.Secret);
-    let signature: ArrayBuffer = await signKey.sign(Buffer.from(did));
+    const signature: ArrayBuffer = await signKey.sign(Buffer.from(did));
     mk = new MasterKey(did, Buffer.from(signature));
     this._didMasterKeys.push(mk);
     return mk;
-  }
-
-  // Set keyUsage
-  private setKeyUsage (): string[] {
-    switch (this._keyUse) {
-      case KeyUse.Encryption:
-        if (this.isKeyPair) {
-          return [ 'deriveKey', 'deriveBits' ];
-        }
-
-        return [ 'encrypt', 'decrypt' ];
-
-      case KeyUse.Signature:
-        return [ 'sign', 'verify' ];
-    }
-
-    throw new Error(`The value for KeyUse '${this._keyUse}' is invalid. Needs to be sig or enc`);
   }
 
   // Transform the KeyObject into a JWK key
@@ -324,8 +358,7 @@ export default class DidKey {
 
   // Transform the oct KeyObject into a JWK key.
   private async getOctJwkKey (keyObject: KeyObject): Promise<any> {
-    let jwk: any = await this._crypto.subtle.exportKey('jwk', keyObject.secretKey);
-    return jwk;
+    return this._crypto.subtle.exportKey('jwk', keyObject.secretKey);
   }
 
   // Transform the key pair KeyObject into a JWK key.
@@ -340,8 +373,7 @@ export default class DidKey {
         break;
     }
 
-    let jwk: any = await this._crypto.subtle.exportKey('jwk', nativeKey);
-    return jwk;
+    return this._crypto.subtle.exportKey('jwk', nativeKey);
   }
 
   private getKeyIdentifier (keyType: KeyType, keyUse: KeyUse, keyExport: KeyExport): string {
@@ -357,11 +389,6 @@ export default class DidKey {
     // TODO add encryption with a system key
     this._jwkKeys.set(keyId, jwk);
     return true;
-  }
-
-  private getKeyObject (keyId: string): object | undefined {
-    // TODO add decryption with a system key
-    return this._keyObjects.get(keyId);
   }
 
   private cacheKeyObject (keyId: string, jwk: object): boolean {
@@ -396,7 +423,7 @@ export default class DidKey {
       throw new Error('Key must be defined');
     }
 
-    let jwkKey = undefined;
+    let jwkKey = {};
     if (!key.kty) {
       jwkKey = {
         kty: 'oct',
@@ -407,20 +434,33 @@ export default class DidKey {
       jwkKey = key;
     }
 
-    let keyObject: KeyObject = await this._crypto.subtle
-      .importKey('jwk', DidKey.normalizeJwk(jwkKey), DidKey.normalizeAlgorithm(this._algorithm), this._exportable, this.setKeyUsage());
+    const keyObject: KeyObject = await this._crypto.subtle.importKey(
+      'jwk',
+      DidKey.normalizeJwk(jwkKey),
+      DidKey.normalizeAlgorithm(this._algorithm),
+      this._exportable,
+      this.getKeyOperations(this.keyUse)
+    );
     return new KeyObject(this.keyType, keyObject);
   }
 
   // Generate an oct key and return a key object
   private async generateOctKey (): Promise<KeyObject> {
-    let keyObject: KeyObject = await this._crypto.subtle.generateKey(DidKey.normalizeAlgorithm(this._algorithm), this._exportable, this.setKeyUsage());
+    const keyObject: KeyObject = await this._crypto.subtle.generateKey(
+      DidKey.normalizeAlgorithm(this._algorithm),
+      this._exportable,
+      this.getKeyOperations(this.keyUse)
+    );
     return new KeyObject(this.keyType, keyObject);
   }
 
   // Generate a key pair and return a key object
   private async generateKeyPair (): Promise<KeyObject> {
-    let keyObject: KeyObject = await this._crypto.subtle.generateKey(DidKey.normalizeAlgorithm(this._algorithm), this._exportable, this.setKeyUsage());
+    const keyObject: KeyObject = await this._crypto.subtle.generateKey(
+      DidKey.normalizeAlgorithm(this._algorithm),
+      this._exportable,
+      this.getKeyOperations(this.keyUse)
+    );
     return new KeyObject(this.keyType, keyObject);
   }
 }

@@ -1,13 +1,18 @@
-
-const elliptic = require('elliptic');
-const BN = require('bn.js');
 import base64url from 'base64url';
+import { BigIntegerStatic } from 'big-integer';
 import DidKey from './DidKey';
+import { KeyExport } from './KeyExport';
 import { KeyType } from './KeyType';
 import { KeyUse } from './KeyUse';
-import { BigIntegerStatic } from 'big-integer';
-import { KeyExport } from './KeyExport';
+
 const bigInt = require('big-integer');
+const BN = require('bn.js');
+
+// Create and initialize EC context
+const elliptic = require('elliptic').ec;
+const secp256k1 = new elliptic('secp256k1');
+
+const SUPPORTED_CURVES = ['K-256', 'P-256K'];
 
 /**
  * Class to model a pairwise key
@@ -84,12 +89,13 @@ export default class PairwiseKey {
     crypto: any,
     algorithm: any,
     keyType: KeyType,
-    keyUse: KeyUse, exportable: boolean = true): Promise<DidKey> {
+    keyUse: KeyUse,
+    exportable: boolean = true): Promise<DidKey> {
     switch (keyType) {
       case KeyType.EC:
-        return this.generateEcPairwiseKey(didMasterKey, crypto, algorithm, keyType, keyUse, exportable);
+        return this.generateEcPairwiseKey(didMasterKey, crypto, algorithm, exportable);
       case KeyType.RSA:
-        return this.generateRsaPairwiseKey(didMasterKey, crypto, algorithm, keyType, keyUse);
+        return this.generateRsaPairwiseKey(didMasterKey, crypto, algorithm, keyUse, exportable);
     }
 
     throw new Error(`Pairwise key for key type ${keyType} is not supported`);
@@ -99,13 +105,13 @@ export default class PairwiseKey {
    * Generate a deterministic number that can be used as prime
    * @param crypto The crypto object.
    * @param keySize Desired key size
-   * @param didMasterKey The DID masterkey
+   * @param didMasterKey The DID master key
    * @param peerId The peer id
    */
   public async generateDeterministicNumberForPrime (crypto: any, primeSize: number, didMasterKey: Buffer, peerId: Buffer): Promise<Buffer> {
-    let numberOfRounds: number = primeSize / (8 * 64);
+    const numberOfRounds: number = primeSize / (8 * 64);
     this._deterministicKey = Buffer.from('');
-    let rounds: Array<(crypto: any, inx: number, key: Buffer, data: Buffer) => Promise<Buffer>> = [];
+    const rounds: Array<(crypto: any, inx: number, key: Buffer, data: Buffer) => Promise<Buffer>> = [];
     for (let inx = 0; inx < numberOfRounds ; inx++) {
       rounds.push((crypto: any, inx: number, key: Buffer, data: Buffer) => {
         return this.generateHashForPrime(crypto, inx, key, data);
@@ -124,9 +130,9 @@ export default class PairwiseKey {
    */
   private async generateHashForPrime (crypto: any, _inx: number, key: Buffer, data: Buffer): Promise<Buffer> {
     const alg = { name: 'hmac', hash: { name: 'SHA-512' } };
-    let deterministicNumber = new DidKey(crypto, alg, key, true);
+    const deterministicNumber = new DidKey(crypto, alg, key, true);
     await deterministicNumber.getJwkKey(KeyExport.Secret);
-    let signature = await deterministicNumber.sign(data);
+    const signature = await deterministicNumber.sign(data);
     this._deterministicKey = Buffer.concat([this._deterministicKey, Buffer.from(signature)]);
     return this._deterministicKey;
   }
@@ -140,7 +146,7 @@ export default class PairwiseKey {
    */
   private async executeRounds (crypto: any, rounds: Array<(crypto: any, inx: number, key: Buffer, data: Buffer) =>
     Promise<Buffer>>, inx: number, key: Buffer, data: Buffer): Promise<Buffer> {
-    let signature: Buffer = await rounds[inx](crypto, inx, key, data);
+    const signature: Buffer = await rounds[inx](crypto, inx, key, data);
     if (inx + 1 === rounds.length) {
       return this._deterministicKey;
     } else {
@@ -158,7 +164,7 @@ export default class PairwiseKey {
     // make sure candidate is uneven, set high order bit
     primeSeed[primeSeed.length - 1] |= 0x1;
     primeSeed[0] |= 0x80;
-    let two = bigInt(2);
+    const two = bigInt(2);
     let prime = bigInt.fromArray(primeSeed, 256, false);
     this._numberOfPrimeTests = 1;
     while (true) {
@@ -178,7 +184,6 @@ export default class PairwiseKey {
    * @param didMasterKey The master key for this did.
    * @param crypto The crypto object.
    * @param algorithm Intended algorithm to use for the key.
-   * @param keyType Key type.
    * @param keyUse Key usage.
    * @param exportable True if the key is exportable.
    */
@@ -186,36 +191,34 @@ export default class PairwiseKey {
     didMasterKey: Buffer,
     crypto: any,
     algorithm: any,
-    keyType: KeyType,
-    keyUse: KeyUse): Promise<DidKey> {
-      // Generate peer key
-    let minimumKeySize = 1024;
-    let keySize = minimumKeySize;
-    if (algorithm.modulusLength) {
-      keySize = algorithm.modulusLength;
-    }
+    keyUse: KeyUse,
+    exportable: boolean): Promise<DidKey> {
+
+    // Set the ke\y size
+    const keySize = algorithm.modulusLength || 1024;
 
     // Get peer id
-    let peerId = Buffer.from(this._peerId);
+    const peerId = Buffer.from(this._peerId);
 
-    // Get pbase
-    let pBase: Buffer = await this.generateDeterministicNumberForPrime(crypto, keySize / 2, didMasterKey, peerId);
-    // Get qbase
-    let qBase: Buffer = await this.generateDeterministicNumberForPrime(crypto, keySize / 2, pBase, peerId);
-    let p = this.getPrime(pBase);
-    let q = this.getPrime(qBase);
+    // Get deterministic base number for p
+    const pBase: Buffer = await this.generateDeterministicNumberForPrime(crypto, keySize / 2, didMasterKey, peerId);
 
-          // compute key components
-    let modulus = p.multiply(q);
-    let pMinus = p.subtract(bigInt.one);
-    let qMinus = q.subtract(bigInt.one);
-    let phi = pMinus.multiply(qMinus);
-    let e = bigInt(65537);
-    let d = e.modInv(phi);
-    let dp = d.mod(pMinus);
-    let dq = d.mod(qMinus);
-    let qi = q.modInv(p);
-    let jwk = {
+    // Get deterministic base number for q
+    const qBase: Buffer = await this.generateDeterministicNumberForPrime(crypto, keySize / 2, pBase, peerId);
+    const p = this.getPrime(pBase);
+    const q = this.getPrime(qBase);
+
+    // compute key components
+    const modulus = p.multiply(q);
+    const pMinus = p.subtract(bigInt.one);
+    const qMinus = q.subtract(bigInt.one);
+    const phi = pMinus.multiply(qMinus);
+    const e = bigInt(65537);
+    const d = e.modInv(phi);
+    const dp = d.mod(pMinus);
+    const dq = d.mod(qMinus);
+    const qi = q.modInv(p);
+    const jwk = {
       kty: 'RSA',
       use: keyUse.toString(),
       e: this.toBase(e),
@@ -228,17 +231,16 @@ export default class PairwiseKey {
       qi: this.toBase(qi)
     };
 
-    return new DidKey(crypto, algorithm, jwk);
+    return new DidKey(crypto, algorithm, jwk, exportable);
   }
 
   /**
    * Uses primeBase as reference and generate the closest prime number
    */
   private getPrime (primeBase: Buffer): any {
-    let qArray = Array.from(primeBase);
-    let prime: bigInt.BigIntegerStatic = this.generatePrime(qArray);
-    let p = new bigInt(prime);
-    return p;
+    const qArray = Array.from(primeBase);
+    const prime: bigInt.BigIntegerStatic = this.generatePrime(qArray);
+    return new bigInt(prime);
   }
 
   /**
@@ -255,45 +257,31 @@ export default class PairwiseKey {
    * @param didMasterKey The master key for this did.
    * @param crypto The crypto object.
    * @param algorithm Intended algorithm to use for the key.
-   * @param keyType Key type.
-   * @param keyUse Key usage.
    * @param exportable True if the key is exportable.
    */
   private async generateEcPairwiseKey (
     didMasterKey: Buffer,
     crypto: any,
-    algorithm: any,
-    keyType: KeyType,
-    keyUse: KeyUse,
-    exportable: boolean = true): Promise<DidKey> {
-      // Generate peer key
+    algorithm: { namedCurve: string },
+    exportable: boolean): Promise<DidKey> {
+
+    // Generate peer key
     const alg = { name: 'hmac', hash: { name: 'SHA-256' } };
-    let hashDidKey = new DidKey(crypto, alg, didMasterKey, true);
-    let signature: any = await hashDidKey.sign(Buffer.from(this._peerId));
-    let ec = undefined;
-    let curve: string = algorithm.namedCurve;
-    switch (algorithm.namedCurve) {
-      case 'K-256':
-      case 'P-256K':
-        ec = new elliptic.ec('secp256k1');
-        break;
+    const hashDidKey = new DidKey(crypto, alg, didMasterKey, true);
+    const signature: any = await hashDidKey.sign(Buffer.from(this._peerId));
 
-      default:
-        throw new Error(`Curve ${algorithm.namedCurve} is not supported`);
+    if (SUPPORTED_CURVES.indexOf(algorithm.namedCurve) === -1) {
+      throw new Error(`Curve ${algorithm.namedCurve} is not supported`);
     }
 
-    let privKey = new BN(Buffer.from(signature));
-    let pair = ec.keyPair({ priv: privKey });
-    let pubKey = pair.getPublic();
-    if (!pair.validate()) {
-      console.log('failed');
-    }
-
-    let d = privKey.toArrayLike(Buffer, 'be', 32);
-    let x = pubKey.x.toArrayLike(Buffer, 'be', 32);
-    let y = pubKey.y.toArrayLike(Buffer, 'be', 32);
-    let jwk = {
-      crv: curve,
+    const privateKey = new BN(Buffer.from(signature));
+    const pair = secp256k1.keyPair({ priv: privateKey });
+    const pubKey = pair.getPublic();
+    const d = privateKey.toArrayLike(Buffer, 'be', 32);
+    const x = pubKey.x.toArrayLike(Buffer, 'be', 32);
+    const y = pubKey.y.toArrayLike(Buffer, 'be', 32);
+    const jwk = {
+      crv: algorithm.namedCurve,
       d: base64url.encode(d),
       x: base64url.encode(x),
       y: base64url.encode(y),
@@ -303,5 +291,4 @@ export default class PairwiseKey {
     this._key = new DidKey(crypto, algorithm, jwk, exportable);
     return this._key;
   }
-
 }

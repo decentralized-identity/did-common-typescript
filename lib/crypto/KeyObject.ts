@@ -76,8 +76,6 @@ export default class KeyObject {
       case KeyType.Oct:
         return false;
     }
-
-    throw new Error(`Key type '${this._keyType}' is not supported`);
   }
 
   /**

@@ -13,7 +13,7 @@ describe('HttpResolver', () => {
 
   describe('constructor', () => {
 
-    it('should return use the default implementation when given a the correct DID from a correctly formatted key ID.', () => {
+    it('should use the default fetch implementation when passed a resolver url', () => {
       (global as any).self = {
         fetch: () => 'testing'
       };
@@ -26,15 +26,38 @@ describe('HttpResolver', () => {
       delete (global as any).self;
     });
 
+    it('should use the default fetch implementation when passed HttpResolverOptions that specified a fetch instance', () => {
+      const httpResolverOptions: any = {
+        fetch: () => 'custom'
+      };
+
+      const resolver = new HttpResolver(httpResolverOptions);
+      expect(resolver['fetchImplementation']).toBeDefined();
+      expect(resolver['fetchImplementation']('https://example.com')).toEqual('custom' as any);
+    });
+
+    it('should use the default fetch implementation when passed HttpResolverOptions that does not specify a fetch instance', () => {
+      (global as any).self = {
+        fetch: () => 'testing'
+      };
+
+      const httpResolverOptions: any = {};
+
+      const resolver = new HttpResolver(httpResolverOptions);
+      expect(resolver['fetchImplementation']).toBeDefined();
+      expect(resolver['fetchImplementation']('https://example.com')).toEqual('testing' as any);
+
+      delete (global as any).self;
+    });
+
     it('should throw an error if no default implementation exists', () => {
       try {
         const resolver = new HttpResolver(exampleUrl);
         fail('Not expected to get here: ' + resolver);
       } catch (e) {
-        expect(e.message).toContain('pass an implementation');
+        expect(e.message).toEqual('Please pass an implementation of fetch() to the HttpResolver.');
       }
     });
-
   });
 
   describe('resolve', () => {
@@ -48,6 +71,23 @@ describe('HttpResolver', () => {
         resolverUrl: exampleUrl,
         fetch: mock
       });
+    });
+
+    it('should not add slash to resolver URL that a trailing slash.', async () => {
+
+      const resolverWithTrailingSlash = new HttpResolver({
+        resolverUrl: 'http://example.com/',
+        fetch: mock
+      });
+
+      mock.mock(`${exampleUrl}/1.0/identifiers/${exampleDid}`, JSON.stringify({
+        document: exampleDocument,
+        resolverMetadata: {}
+      }));
+
+      let response = await resolverWithTrailingSlash.resolve(exampleDid);
+
+      expect(response.didDocument.id).toEqual(exampleDid);
     });
 
     it('should return a valid DID document.', async () => {
@@ -82,7 +122,5 @@ describe('HttpResolver', () => {
         expect(e.message).toContain('reported an error');
       }
     });
-
   });
-
 });

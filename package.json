@@ -1,7 +1,7 @@
 {
   "name": "@decentralized-identity/did-common-typescript",
   "version": "0.1.8",
-  "description": "Common TypeScript DID library.",
+  "description": "Common TypeScript library for decentralized identity.",
   "scripts": {
     "precommit": "npm run lint",
     "build": "tsc",
@@ -17,6 +17,15 @@
   "types": "dist/lib/index.d.ts",
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "base64url": "^3.0.1",
+    "big-integer": "github:peterolson/BigInteger.js",
+    "clone": "^2.1.2",
+    "elliptic": "^6.4.1",
+    "install": "^0.12.2",
+    "node-webcrypto-ossl": "1.0.39",
+    "npm": "^6.8.0"
+  },
   "devDependencies": {
     "@types/fetch-mock": "^7.2.3",
     "@types/jasmine": "^2.8.8",
@@ -53,14 +62,5 @@
   },
   "files": [
     "dist/lib/**/*"
-  ],
-  "dependencies": {
-    "base64url": "^3.0.1",
-    "big-integer": "github:peterolson/BigInteger.js",
-    "clone": "^2.1.2",
-    "elliptic": "^6.4.1",
-    "install": "^0.12.2",
-    "node-webcrypto-ossl": "^1.0.39",
-    "npm": "^6.8.0"
-  }
+  ]
 }
