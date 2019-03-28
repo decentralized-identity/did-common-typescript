@@ -244,7 +244,7 @@ describe('DidKey', () => {
 
         const ecKey1 = await didKey.getJwkKey(KeyExport.Private);
         expect(ecKey1).not.toBeNull();
-        expect(ecKey1.crv).toBe('K-256');
+        expect(ecKey1.crv).toBe('P-256K');
         expect(ecKey1.kty).toBe('EC');
       });
       done();

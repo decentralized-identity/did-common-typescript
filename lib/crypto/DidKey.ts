@@ -131,7 +131,7 @@ export default class DidKey {
         jwkPublic.e = jwk.e;
         jwkPublic.n = jwk.n;
       } else {
-        jwkPublic.crv = jwk.crv;
+        jwkPublic.crv = this._algorithm.namedCurve;
         jwkPublic.x = jwk.x;
         jwkPublic.y = jwk.y;
       }
@@ -373,7 +373,11 @@ export default class DidKey {
         break;
     }
 
-    return this._crypto.subtle.exportKey('jwk', nativeKey);
+    let jwk = await this._crypto.subtle.exportKey('jwk', nativeKey);
+    if (jwk.kty === 'EC') {
+      jwk.crv = this._algorithm.namedCurve;
+    }
+    return jwk;
   }
 
   private getKeyIdentifier (keyType: KeyType, keyUse: KeyUse, keyExport: KeyExport): string {
