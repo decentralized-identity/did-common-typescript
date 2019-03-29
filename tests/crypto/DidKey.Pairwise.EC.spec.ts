@@ -99,6 +99,7 @@ describe('DidKey - elliptic curve pairwise keys', () => {
       let id = `${inx}`;
       let pairwiseKey: DidKey = await didKey.generatePairwise(seed, did, id);
       let jwk = await pairwiseKey.getJwkKey(KeyExport.Private);
+      expect(jwk.kid).toBeDefined();
 
       console.log(`{ "pwid": "${id}", "key": "${jwk.d}"},`);
       // console.log(`${id}: Check ${pairwiseKeys[inx].pwid}: ${pairwiseKeys[inx].key} == ${jwk.d}`);
@@ -125,6 +126,7 @@ describe('DidKey - elliptic curve pairwise keys', () => {
     for (let pwid of ids) {
       let pairwiseKey: DidKey = await didKey.generatePairwise(seed, did, pwid);
       let jwk = await pairwiseKey.getJwkKey(KeyExport.Private);
+      expect(jwk.kid).toBeDefined();
       // console.log(`{ pwid: '${pwid}', inx: ${inx++}, key: '${jwk.d}'},`);
       pairwiseKeys.forEach((element: any) => {
         if (element.pwid === pwid) {
@@ -154,6 +156,7 @@ describe('DidKey - elliptic curve pairwise keys', () => {
     for (let pwid of ids) {
       let pairwiseKey: DidKey = await didKey.generatePairwise(seed, did, pwid);
       let jwk = await pairwiseKey.getJwkKey(KeyExport.Private);
+      expect(jwk.kid).toBeDefined();
       // console.log(`{ pwid: '${pwid}', inx: ${inx++}, key: '${jwk.d}'},`);
       pairwiseKeys.forEach((element: any) => {
         if (element.pwid === pwid) {
