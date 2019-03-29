@@ -47,6 +47,7 @@ describe('DidKey', () => {
         let key: any = await didKey.getJwkKey(KeyExport.Secret);
         expect(key).not.toBeNull();
         expect(key.kty).toBe('oct');
+        expect(key.kid).toBeDefined();
         expect(base64url.encode(Buffer.from(sampleKey))).toBe(key.k);
       });
       done();
@@ -64,6 +65,7 @@ describe('DidKey', () => {
         let key = await didKey.getJwkKey(KeyExport.Secret);
         expect(key).not.toBeNull();
         expect(key.kty).toBe('oct');
+        expect(key.kid).toBeDefined();
         expect(key.k).not.toBeNull();
         expect(key.k).not.toBeUndefined();
       });
@@ -244,6 +246,7 @@ describe('DidKey', () => {
 
         const ecKey1 = await didKey.getJwkKey(KeyExport.Private);
         expect(ecKey1).not.toBeNull();
+        expect(ecKey1.kid).toBeDefined();
         expect(ecKey1.crv).toBe('P-256K');
         expect(ecKey1.kty).toBe('EC');
       });

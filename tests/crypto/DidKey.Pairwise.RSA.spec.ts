@@ -28,6 +28,7 @@ describe('DidKey - RSA pairwise keys', () => {
       const jwk = await pairwiseKey.getJwkKey(KeyExport.Private);
       // The following comments is used to generate a test vector reference file. Do not remove.
       console.log(`{ "pwid": "${id}", "key": "${jwk.d}"},`);
+      expect(jwk.kid).toBeDefined();
 
       expect(pairwiseKeys[index].key).toBe(jwk.d);
       expect(1).toBe(pairwiseKeys.filter((element: any) => element.key === jwk.d).length);

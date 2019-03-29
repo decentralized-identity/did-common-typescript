@@ -125,6 +125,10 @@ export default class DidKey {
       // Save only public key
       const jwkPublic: any = {};
       jwkPublic.kty = jwk.kty;
+      if (!jwk.kid) {
+        jwk.kid = jwkPublic.kid = '#key1';
+      }
+
       jwkPublic.use = jwk.use;
       jwkPublic.key_ops = jwk.key_ops;
       if (this.keyType === KeyType.RSA) {
@@ -358,7 +362,11 @@ export default class DidKey {
 
   // Transform the oct KeyObject into a JWK key.
   private async getOctJwkKey (keyObject: KeyObject): Promise<any> {
-    return this._crypto.subtle.exportKey('jwk', keyObject.secretKey);
+    const jwk = await this._crypto.subtle.exportKey('jwk', keyObject.secretKey);
+    if (!jwk.kid) {
+      jwk.kid = '#kid1';
+    }
+    return jwk;
   }
 
   // Transform the key pair KeyObject into a JWK key.
@@ -431,10 +439,14 @@ export default class DidKey {
     if (!key.kty) {
       jwkKey = {
         kty: 'oct',
+        kid: '#key1',
         use: this.keyUse,
         k: base64url(key)
       };
     } else {
+      if (!key.kid) {
+        key.kid = '#key1';
+      }
       jwkKey = key;
     }
 

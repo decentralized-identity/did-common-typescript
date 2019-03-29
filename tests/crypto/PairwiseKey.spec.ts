@@ -48,6 +48,7 @@ describe('PairwiseKey', () => {
     let didKey: DidKey = await key.generate(masterKey, crypto, alg, KeyType.EC, KeyUse.Signature, true);
     expect(didKey).toBeDefined();
     const jwk = await didKey.getJwkKey(KeyExport.Private);
+    expect(jwk.kid).toBeDefined();
     const data = 'abcdefghij';
     const signature: ArrayBuffer = await didKey.sign(Buffer.from(data));
     // Make sure there is only the public key
