@@ -2,6 +2,7 @@ import DidKey from './crypto/DidKey';
 import { KeyExport } from './crypto/KeyExport';
 import KeyTypeFactory, { KeyType } from './crypto/KeyType';
 import KeyUseFactory, { KeyUse } from './crypto/KeyUse';
+import DidDocument from './DidDocument';
 import IDidDocument from './IDidDocument';
 import IDidDocumentPublicKey from './IDidDocumentPublicKey';
 import IDidDocumentServiceDescriptor from './IDidDocumentServiceDescriptor';
@@ -17,6 +18,7 @@ export {
   KeyType,
   KeyTypeFactory,
   KeyUseFactory,
+  DidDocument,
   IDidDocument,
   IDidDocumentPublicKey,
   IDidDocumentServiceDescriptor,
