@@ -1,6 +1,6 @@
 {
   "name": "@decentralized-identity/did-common-typescript",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "Common TypeScript library for decentralized identity.",
   "scripts": {
     "precommit": "npm run lint",
