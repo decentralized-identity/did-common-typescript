@@ -1,6 +1,6 @@
 {
   "name": "@decentralized-identity/did-common-typescript",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "Common TypeScript library for decentralized identity.",
   "scripts": {
     "precommit": "npm run lint",
@@ -19,9 +19,7 @@
   "license": "ISC",
   "dependencies": {
     "base64url": "^3.0.1",
-    "clone": "^2.1.2",
-    "install": "^0.12.2",
-    "npm": "^6.8.0"
+    "clone": "^2.1.2"
   },
   "devDependencies": {
     "@types/fetch-mock": "^7.2.3",
