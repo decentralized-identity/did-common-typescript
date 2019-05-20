@@ -113,6 +113,41 @@ describe('DidDocument', () => {
       expect(keys[1].type).toEqual('test');
       expect((keys[1] as any)['publicKeyBase64']).toBeDefined();
     });
+
+    it('should ensure key IDs are fully-qualified', () => {
+      const id = 'did:example:123456789abcdefghi';
+      const json: IDidDocument = {
+        '@context': 'https://w3id.org/did/v1',
+        id,
+        'publicKey': [
+          {
+            id: `key1`,
+            controller: id,
+            type: 'test',
+            publicKeyPem: '-----BEGIN PUBLIC KEY-----\r\n-----END PUBLIC KEY-----\r\n\r\n'
+          },
+          {
+            id: `#key2`,
+            controller: id,
+            type: 'test',
+            publicKeyBase64: 'DEADBEEF'
+          },
+          {
+            id: `${id}#key3`,
+            controller: id,
+            type: 'test',
+            publicKeyBase64: 'DEADBEEF'
+          }
+        ]
+      };
+
+      let document = new DidDocument(json);
+      expect(document.getPublicKey(`${id}#key1`)).toBeDefined();
+      expect(document.getPublicKey(`${id}#key2`)).toBeDefined();
+      expect(document.getPublicKey(`${id}#key3`)).toBeDefined();
+      expect(document.getPublicKey(`${id}#key4`)).not.toBeDefined();
+    });
+
   });
 
   describe('getPublicKey', () => {

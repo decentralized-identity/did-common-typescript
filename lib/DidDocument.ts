@@ -35,10 +35,11 @@ export default class DidDocument {
         throw new Error(`${field} is required`);
       }
     }
+
+    this.rawDocument = json;
     this.context = json['@context'];
     this.id = json.id;
-    this.publicKey = (json.publicKey || []);
-    this.rawDocument = json;
+    this.publicKey = this.parsePublicKeyDetails(json.publicKey || []);
   }
 
   /**
@@ -64,5 +65,25 @@ export default class DidDocument {
    */
   public getServicesByType (type: string) {
     return this.getServices().filter(service => service.type === type);
+  }
+
+  /**
+   * Parses the `publicKey` array in the DID document and ensures that the key IDs are
+   * fully-qualified.
+   *
+   * @param publicKeyDefinitions The `publicKey` array from the DID document.
+   */
+  private parsePublicKeyDetails (publicKeyDefinitions: DidPublicKey[]) {
+    return publicKeyDefinitions.map(key => {
+      let id = key.id;
+
+      if (!id.includes('#')) {
+        id = `${this.id}#${id}`;
+      } else if (id.indexOf('#') === 0) {
+        id = this.id + id;
+      }
+
+      return Object.assign({}, key, { id });
+    });
   }
 }
