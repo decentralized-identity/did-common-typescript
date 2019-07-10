@@ -30,4 +30,29 @@ export default class Metrics {
       emitter.emitGauge(gauge);
     });
   }
+
+  /**
+   * Times a codeBlock and emits a gauge metric
+   * @param name Name of the gauge metric to emit
+   * @param codeBlock Code to time, given a reference to the metric labels, and an optional stop function
+   */
+  static async time<T> (name: string, codeBlock: (labels: {[label: string]: any}, stop: () => void) => Promise<T>): Promise<T> {
+    const startTimestamp = process.hrtime.bigint();
+    let stopped = false;
+    let labels: {[label: string]: any} = {};
+    const stop = () => {
+      const stopTimestamp = process.hrtime.bigint();
+      if (!stopped) {
+        stopped = true;
+        Metrics.gauge({
+          name,
+          labels,
+          value: parseFloat(((stopTimestamp - startTimestamp) / BigInt(1000000000)).toString(10))
+        });
+      }
+    }
+    const result = await codeBlock(labels, stop);
+    stop();
+    return result;
+  }
 }

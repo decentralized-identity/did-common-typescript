@@ -24,7 +24,7 @@
   "devDependencies": {
     "@types/fetch-mock": "^7.2.3",
     "@types/jasmine": "^2.8.8",
-    "@types/node": "^10.10.1",
+    "@types/node": "^10.14.12",
     "fetch-mock": "^7.3.0",
     "husky": "^0.14.3",
     "jasmine": "^3.2.0",
