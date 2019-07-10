@@ -16,5 +16,5 @@ describe('Metrics', () => {
     it('should emit a gauge', async () => {
       // also coming soon
     });
-  })
+  });
 });
