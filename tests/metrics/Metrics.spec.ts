@@ -11,4 +11,10 @@ describe('Metrics', () => {
       // coming soon.
     });
   });
+
+  describe('time', () => {
+    it('should emit a gauge', async () => {
+      // also coming soon
+    });
+  })
 });
