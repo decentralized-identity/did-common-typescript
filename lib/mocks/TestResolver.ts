@@ -9,6 +9,10 @@ export default class TestResolver implements IDidResolver {
   /** Function called when requested */
   private handleRequest?: (did: string) => Promise<DidDocument>;
 
+  /**
+   * Resolve a DID using the handleRequest function
+   * @param did The DID to resolve
+   */
   async resolve (did: string): Promise<IDidResolveResult> {
     if (!this.handleRequest) {
       throw new Error('TestResolver handler not set');

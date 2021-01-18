@@ -26,7 +26,7 @@ export default class HttpResolver implements IDidResolver {
 
   private resolverUrl: string;
 
-  private fetchImplementation: GlobalFetch['fetch'];
+  private fetchImplementation: WindowOrWorkerGlobalScope['fetch'];
 
    /**
     * Constructs a new HTTP resolver.
