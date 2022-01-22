@@ -31,7 +31,7 @@
     "jasmine-reporters": "^2.3.2",
     "jasmine-spec-reporter": "^4.2.1",
     "jasmine-ts": "^0.2.1",
-    "node-fetch": "^2.3.0",
+    "node-fetch": "^3.1.1",
     "nyc": "^13.3.0",
     "source-map-support": "^0.5.9",
     "tslint": "^5.11.0",
